@@ -1,4 +1,4 @@
-EXE = graph_example
+EXE = color.app
 
 SRC_DIR = src
 OBJ_DIR = obj
@@ -7,7 +7,7 @@ SRC = $(wildcard $(SRC_DIR)/*.cc)
 OBJ = $(SRC:$(SRC_DIR)/%.cc=$(OBJ_DIR)/%.o)
 
 LDLIBS += -lcilkrts
-CPPFLAGS += -Iinclude
+CPPFLAGS += -Iinclude -isystem ligra
 CXXFLAGS += -Wall -fcilkplus -lcilkrts
 
 .PHONY: all clean

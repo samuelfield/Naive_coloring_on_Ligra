@@ -1,22 +1,104 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
+#include <vector>
 
-#include "coloring.hh"
 #include "bitsetscheduler.h"
-#include "parallel.h"
-#include "util.h"
+#include "ligra.h"
 #include "gettime.h"
 
 #define TIME_PRECISION 3
 
+#define CILK
+
+struct Color
+{
+    uint64_t color;
+
+    Color() : color(0){}
+
+    inline bool operator==(const Color &rhs)
+    {
+        if (color == rhs.color)
+            return true;
+        else
+            return false;
+    }
+    inline bool operator!=(const Color &rhs)
+    {
+        if (color != rhs.color)
+            return true;
+        else
+            return false;
+    }
+};
+
+
+// Go through every vertex and check that it's color does not conflict with neighbours
+// while also checking that each vertex is minimally colored
+template <class vertex>
+void assessGraph(graph<vertex> &GA, Color *colorData)
+{
+    uint32_t numVertices = GA.n;
+    uintT conflict = 0;
+    uintT notMinimal = 0;
+
+    parallel_for(intT v = 0; v < numVertices; v++)
+    {
+        uint64_t vValue = colorData[v].color;  
+        uintT vDegree = GA.V[v].getOutDegree();
+        std::vector<bool> possibleColors(vDegree + 1, true);
+        uint32_t minimalColor = 0;
+
+        parallel_for(intT n = 0; n < vDegree; n++)
+        {
+            intT i = GA.V[v].getOutNeighbor(n);
+            uint64_t neighVal = colorData[i].color;
+            possibleColors[neighVal] = false;
+            
+            if (neighVal == vValue)
+            {
+                conflict++;
+            }
+        }
+
+        while (!possibleColors[minimalColor] && (minimalColor < vDegree + 1))
+        {
+            minimalColor++;
+        }
+
+        if (vValue != minimalColor)
+        {
+            notMinimal++;
+        }
+    }
+
+    if (conflict != 0)
+    {
+        std::cout << "Failure: color conflicts on " << conflict << " vertices" << std::endl;
+    }
+    else if (notMinimal != 0)
+    {
+        std::cout << "Failure: minimality condition broken for " << notMinimal << " vertices" << std::endl;
+    }
+    else
+    {
+        std::cout << "Successful Coloring!" << std::endl;
+    }
+}
+
+
 
 // Naive coloring implementation
 // active vertices, and time
-void naive_coloring(Graph& graph, bool verbose)
+template <class vertex>
+void Compute(graph<vertex> &GA, commandLine P)
 {
-    uint32_t numVertices = graph.sizeVertex();
+    intT numVertices = GA.n;
+    std::vector<Color> colorData(numVertices);
+
     // Verbose variables
+    bool verbose = true;
     uint32_t activeVertices;
     uint32_t activeEdges;
     timer fullTimer, iterTimer;
@@ -52,58 +134,61 @@ void naive_coloring(Graph& graph, bool verbose)
         activeVertices = currentSchedule.numTasks();
 
         // Parallel loop where each vertex is assigned a color
-        cilk_for(uint32_t v = 0; v < numVertices; v++)
+        cilk_for(intT v = 0; v < numVertices; v++)
         {
             if (currentSchedule.isScheduled(v))
             {
                 // std::cout << "vertex: " << v << std::endl; // Debug
                 
                 // Get current vertex's neighbours
-                std::vector<int> neighbors;
-                uint32_t vDegree = graph.getNeighbors(neighbors, v);
-                int32_t vMaxValue = (int32_t) vDegree + 1;
+                uintT vDegree = GA.V[v].getOutDegree();
+                uintT vMaxValue = vDegree + 1;
                 bool scheduleNeighbors = false;
                 activeEdges += vDegree;
                 
                 // Make bool array for possible color values and then set any color
                 // already taken by neighbours to false 
-                std::vector<bool> possibleValues(vMaxValue, true);
-                cilk_for(uint32_t n = 0; n < vDegree; n++)
+                DenseBitset possibleValues(vMaxValue);
+                possibleValues.setAll();
+                cilk_for(uintT n = 0; n < vDegree; n++)
                 {
-                    int32_t neighVal = graph.getVertexValue(neighbors[n]);
-                    possibleValues[neighVal] = false;
+                    intT i = GA.V[v].getOutNeighbor(n);
+                    uint64_t neighVal = colorData[i].color;
+                    possibleValues.set(neighVal, false);
                 }
 
                 // std::cout << std::endl; // Debug
 
                 // Find minimum color by iterating through color array in increasing order
-                int32_t newValue = 0;
-                while (newValue < vMaxValue)
+                uint64_t newColor = 0;
+                uint64_t currentColor = colorData[v].color; 
+                while (newColor < vMaxValue)
                 {
-                    // std::cout << "Color: " << newValue << " is " << possibleValues[newValue] << std::endl; // Debug 
+                    // std::cout << "Color: " << newColor << " is " << possibleValues[newColor] << std::endl; // Debug 
                     
                     // If color is available and it is not the vertex's current value then try to assign
-                    if (possibleValues[newValue])
+                    if (possibleValues.get(newColor))
                     {
-                        if (graph.getVertexValue(v) != newValue)
+                        if (currentColor != newColor)
                         {
-                            // std::cout << "Does not equal: " << graph.getVertexValue(v) << " != " << newValue << std::endl; // Debug
-                            graph.setVertexValue(v, newValue);
+                            // std::cout << "Does not equal: " << graph.getVertexValue(v) << " != " << newColor << std::endl; // Debug
+                            colorData[v].color = newColor;
                             scheduleNeighbors = true;
                         }
                         
                         break;
                     }
 
-                    newValue++;
+                    newColor++;
                 }
 
                 // Schedule all neighbours if required
                 if (scheduleNeighbors)
                 {
-                    for (uint32_t n = 0; n < vDegree; n++)
+                    for (uintT n = 0; n < vDegree; n++)
                     {
-                        currentSchedule.schedule(neighbors[n], false);
+                        intT i = GA.V[v].getOutNeighbor(n);
+                        currentSchedule.schedule(i, false);
                     }
                 }
 
@@ -125,47 +210,9 @@ void naive_coloring(Graph& graph, bool verbose)
     {
         cout << "\nTotal Time : " << setprecision(TIME_PRECISION) << fullTimer.stop() << "\n";
     }
+
+
+    // assessGraph(GA, colorData);
 }
 
 
-// Go through every vertex and check that it's color does not conflict with neighbours
-// while also checking that each vertex is minimally colored
-bool assessGraph(Graph& graph)
-{
-    uint32_t numVertices = graph.sizeVertex();
-
-    cilk_for(uint32_t v = 0; v < numVertices; v++)
-    {
-        uint32_t vValue = (uint32_t) graph.getVertexValue(v);
-        std::vector<int> neighbors;
-        uint32_t vDegree = graph.getNeighbors(neighbors, v);
-        std::vector<bool> possibleColors(vDegree + 1, true);
-        uint32_t minimalColor = 0;
-
-        cilk_for(uint32_t n = 0; n < vDegree; n++)
-        {
-            uint32_t neighVal = graph.getVertexValue(neighbors[n]);
-            possibleColors[neighVal] = false;
-            
-            if (neighVal == vValue)
-            {
-                std::cout << "Failure: Color for vertex " << v << " conflicts with vertex " << n << "!" << std::endl;
-                return false;
-            }
-        }
-
-        while (!possibleColors[minimalColor] && (minimalColor < vDegree + 1))
-        {
-            minimalColor++;
-        }
-
-        if (vValue != minimalColor)
-        {
-            std::cout << "Failure: Color for vertex " << v << " not minimal!" << std::endl;
-            return false;
-        }
-    }
-
-    std::cout << "Successful Coloring!" << std::endl;
-    return true;
-}
