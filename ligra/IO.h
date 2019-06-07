@@ -217,7 +217,7 @@ graph<vertex> readGraphFromFile(char* fname, bool isSymmetric, bool mmap) {
       edges[2*i+1] = atol(W.Strings[i+n+m+3]);
 #endif
     }}
-  //W.del(); // to deal with performance bug in malloc
+  W.del(); // to deal with performance bug in malloc
 
   vertex* v = newA(vertex,n);
 

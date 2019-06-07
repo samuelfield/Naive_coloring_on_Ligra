@@ -9,8 +9,6 @@
 
 #define TIME_PRECISION 3
 
-#define CILK
-
 struct Color
 {
     uint64_t color;
@@ -95,7 +93,13 @@ template <class vertex>
 void Compute(graph<vertex> &GA, commandLine P)
 {
     intT numVertices = GA.n;
-    std::vector<Color> colorData(numVertices);
+    Color *colorData = newA(Color ,numVertices);
+    if (colorData == nullptr)
+    {
+        std::cout << "Allocation error!" << std::endl;
+        return;
+    }
+    parallel_for(intT i=0;i<numVertices;i++) colorData[i].color = 0;
 
     // Verbose variables
     bool verbose = true;
@@ -134,7 +138,7 @@ void Compute(graph<vertex> &GA, commandLine P)
         activeVertices = currentSchedule.numTasks();
 
         // Parallel loop where each vertex is assigned a color
-        cilk_for(intT v = 0; v < numVertices; v++)
+        parallel_for(intT v = 0; v < numVertices; v++)
         {
             if (currentSchedule.isScheduled(v))
             {
@@ -142,7 +146,7 @@ void Compute(graph<vertex> &GA, commandLine P)
                 
                 // Get current vertex's neighbours
                 uintT vDegree = GA.V[v].getOutDegree();
-                uintT vMaxValue = vDegree + 1;
+                uint64_t vMaxValue = vDegree + 1;
                 bool scheduleNeighbors = false;
                 activeEdges += vDegree;
                 
@@ -150,13 +154,12 @@ void Compute(graph<vertex> &GA, commandLine P)
                 // already taken by neighbours to false 
                 DenseBitset possibleValues(vMaxValue);
                 possibleValues.setAll();
-                cilk_for(uintT n = 0; n < vDegree; n++)
+                parallel_for(uintT n = 0; n < vDegree; n++)
                 {
                     intT i = GA.V[v].getOutNeighbor(n);
                     uint64_t neighVal = colorData[i].color;
                     possibleValues.set(neighVal, false);
                 }
-
                 // std::cout << std::endl; // Debug
 
                 // Find minimum color by iterating through color array in increasing order
@@ -213,6 +216,7 @@ void Compute(graph<vertex> &GA, commandLine P)
 
 
     // assessGraph(GA, colorData);
+    free(colorData);
 }
 
 
