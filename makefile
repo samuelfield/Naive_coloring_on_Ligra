@@ -8,7 +8,7 @@ OBJ = $(SRC:$(SRC_DIR)/%.cc=$(OBJ_DIR)/%.o)
 
 LDLIBS += -lcilkrts
 CPPFLAGS += -Iinclude -isystem ligra
-CXXFLAGS += -Wall -fcilkplus -lcilkrts
+CXXFLAGS += -Wall -fcilkplus -g -lcilkrts
 
 .PHONY: all clean
 
