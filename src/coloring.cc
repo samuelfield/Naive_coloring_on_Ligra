@@ -83,9 +83,23 @@ struct Color
         else
             return false;
     }
+    inline bool operator<=(const Color &rhs)
+    {
+        if (color <= rhs.color)
+            return true;
+        else
+            return false;
+    }
     inline bool operator>(const Color &rhs)
     {
         if (color > rhs.color)
+            return true;
+        else
+            return false;
+    }
+    inline bool operator>=(const Color &rhs)
+    {
+        if (color >= rhs.color)
             return true;
         else
             return false;
@@ -109,6 +123,7 @@ void assessGraph(graph<vertex> &GA, uintT maxDegree)
         uintT vDegree = GA.V[v_i].getOutDegree();
         std::vector<bool> possibleColors(maxDegree + 1, true);
         Color minimalColor = 0;
+        bool neighConflict = false;
 
         parallel_for(uintT n_i = 0; n_i < vDegree; n_i++)
         {
@@ -118,9 +133,11 @@ void assessGraph(graph<vertex> &GA, uintT maxDegree)
             
             if (neighVal == vValue)
             {
-                conflict++;
+                neighConflict = true;
             }
         }
+        if (neighConflict)
+            conflict++;
 
         while (!possibleColors[minimalColor.color] && (minimalColor < vDegree + 1))
         {
@@ -235,6 +252,7 @@ void Compute(graph<vertex> &GA, commandLine P)
                 const uintT vDegree = GA.V[v_i].getOutDegree();
                 const Color vMaxColor = vDegree + 1;
                 bool scheduleNeighbors = false;
+                
                 activeEdges += vDegree;
 
                 // Make bool array for possible color values and then set any color
