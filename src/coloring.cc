@@ -166,25 +166,30 @@ uintT getMaxDeg(const graph<vertex> &GA)
 
 
 
+//randomize vertex values
+template <class vertex>
+void randomizeColors(graph<vertex> &GA)
+{
+    const size_t numVertices = GA.n;
+    std::random_device rd;
+    std::mt19937 mt(rd());
+
+    for (uintT v_i = 0; v_i < numVertices; v_i++)
+    {
+        const uintT vDegree = GA.V[v_i].getOutDegree();
+        std::uniform_int_distribution<uintT> dist(0, vDegree);
+        colorData[v_i] = dist(mt);
+    }
+}
+
 // Naive coloring implementation
 template <class vertex>
 void Compute(graph<vertex> &GA, commandLine P)
 {
     const size_t numVertices = GA.n;
     colorData = new Color[numVertices];
-    // possibleColors = new bool*[numVertices];
     const uintT maxDegree = getMaxDeg(GA);
-
-    // randomize vertex values
-    std::random_device rd;
-    std::mt19937 mt(rd());
-    std::uniform_int_distribution<uintT> dist(0, maxDegree);
-
-    parallel_for (uintT i = 0; i < numVertices; i++)
-    {
-        // possibleColors[i] = new bool[maxDegree + 1]();
-        colorData[i] = dist(mt);
-    }
+    randomizeColors(GA);
 
     // Verbose variables
     bool verbose = true;
@@ -231,21 +236,15 @@ void Compute(graph<vertex> &GA, commandLine P)
                 const Color vMaxColor = vDegree + 1;
                 bool scheduleNeighbors = false;
                 activeEdges += vDegree;
+
                 // Make bool array for possible color values and then set any color
                 // already taken by neighbours to false
                 std::vector<bool> possibleColors(maxDegree + 1, true);
-                // possibleColors[i] = new bool[maxDegree + 1]();
-                
-                // for (size_t c_i = 0; c_i < vDegree; c_i++)
-                // {
-                //     possibleColors[v_i][c_i] = true;//.setAll();
-                // }
                 
                 parallel_for(uintT n_i = 0; n_i < vDegree; n_i++)
                 {
                     uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
                     Color neighVal = colorData[neigh];
-                    // possibleColors[v_i][neighVal.color] = false;   
                     possibleColors[neighVal.color] = false;           
                 }
 
@@ -255,7 +254,6 @@ void Compute(graph<vertex> &GA, commandLine P)
                 while (newColor < vMaxColor)
                 {                    
                     // If color is available and it is not the vertex's current value then try to assign
-                    // if (possibleColors[v_i][newColor.color])
                     if (possibleColors[newColor.color])
                     {
                         if (currentColor != newColor)
@@ -296,5 +294,3 @@ void Compute(graph<vertex> &GA, commandLine P)
     assessGraph(GA, maxDegree);
     delete[] colorData;
 }
-
-
