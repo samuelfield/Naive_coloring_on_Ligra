@@ -1,3 +1,27 @@
+// This code is part of the project "Ligra: A Lightweight Graph Processing
+// Framework for Shared Memory", presented at Principles and Practice of
+// Parallel Programming, 2013.
+// Copyright (c) 2013 Julian Shun and Guy Blelloch
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights (to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 #include <iostream>
 #include <thread>
 #include <mutex>
@@ -10,27 +34,87 @@
 
 #define TIME_PRECISION 3
 
+struct Color
+{
+    uint64_t color;
+
+    Color() : color(0) {}
+    Color(uint64_t val) : color(val) {}
+
+    inline Color operator=(const Color &rhs)
+    {
+        color = rhs.color;
+        return *this;
+    }
+
+    // prefix
+    inline Color& operator++()
+    {
+        this->color++;
+        return *this;
+    }
+
+    // postfix
+    inline Color operator++(int)
+    {
+        Color tmp(*this);
+        operator++();
+        return tmp;
+    }
+
+    inline bool operator==(const Color &rhs)
+    {
+        if (color == rhs.color)
+            return true;
+        else
+            return false;
+    }
+    inline bool operator!=(const Color &rhs)
+    {
+        if (color != rhs.color) 
+            return true;
+        else
+            return false;
+    }
+    inline bool operator<(const Color &rhs)
+    {
+        if (color < rhs.color)
+            return true;
+        else
+            return false;
+    }
+    inline bool operator>(const Color &rhs)
+    {
+        if (color > rhs.color)
+            return true;
+        else
+            return false;
+    }
+};
+
+Color* colorData;
+
 // Go through every vertex and check that it's color does not conflict with neighbours
 // while also checking that each vertex is minimally colored
 template <class vertex>
-void assessGraph(graph<vertex> &GA, uint64_t *colorData)
+void assessGraph(graph<vertex> &GA, uintT maxDegree) 
 {
-    uint32_t numVertices = GA.n;
+    uintT numVertices = GA.n;
     uintT conflict = 0;
     uintT notMinimal = 0;
 
     parallel_for(uintT v_i = 0; v_i < numVertices; v_i++)
     {
-        uint64_t vValue = colorData[v_i];  
+        Color vValue = colorData[v_i];  
         uintT vDegree = GA.V[v_i].getOutDegree();
-        std::vector<bool> possibleColors(vDegree + 1, true);
-        uint32_t minimalColor = 0;
+        std::vector<bool> possibleColors(maxDegree + 1, true);
+        Color minimalColor = 0;
 
         parallel_for(uintT n_i = 0; n_i < vDegree; n_i++)
         {
-            uintT i = GA.V[v_i].getOutNeighbor(n_i);
-            uint64_t neighVal = colorData[i];
-            possibleColors[neighVal] = false;
+            uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
+            Color neighVal = colorData[neigh];
+            possibleColors[neighVal.color] = false;
             
             if (neighVal == vValue)
             {
@@ -38,7 +122,7 @@ void assessGraph(graph<vertex> &GA, uint64_t *colorData)
             }
         }
 
-        while (!possibleColors[minimalColor] && (minimalColor < vDegree + 1))
+        while (!possibleColors[minimalColor.color] && (minimalColor < vDegree + 1))
         {
             minimalColor++;
         }
@@ -53,20 +137,23 @@ void assessGraph(graph<vertex> &GA, uint64_t *colorData)
     {
         std::cout << "Failure: color conflicts on " << conflict << " vertices" << std::endl;
     }
-    else if (notMinimal != 0)
+    if (notMinimal != 0)
     {
         std::cout << "Failure: minimality condition broken for " << notMinimal << " vertices" << std::endl;
     }
-    else
+    if (conflict == 0 && notMinimal == 0)
     {
         std::cout << "Successful Coloring!" << std::endl;
     }
 }
 
+
+// Find the maximum degree amongst nodes of the graph
 template <class vertex>
-void randomizeVertexValues(graph<vertex> &GA, std::vector<uintT> &colorData)
+uintT getMaxDeg(const graph<vertex> &GA)
 {
     uintT maxDegree = 0;
+    // TODO: look into parallelizing this loop with CAS
     for (uintT v_i=0; v_i < GA.n; v_i++)
     {
         if (GA.V[v_i].getOutDegree() > maxDegree)
@@ -74,37 +161,35 @@ void randomizeVertexValues(graph<vertex> &GA, std::vector<uintT> &colorData)
             maxDegree = GA.V[v_i].getOutDegree();
         }
     }
-    std::cout << "Max degree: " << maxDegree << std::endl; 
+    return maxDegree;
+}
+
+
+
+// Naive coloring implementation
+template <class vertex>
+void Compute(graph<vertex> &GA, commandLine P)
+{
+    const size_t numVertices = GA.n;
+    colorData = new Color[numVertices];
+    // possibleColors = new bool*[numVertices];
+    const uintT maxDegree = getMaxDeg(GA);
+
+    // randomize vertex values
     std::random_device rd;
     std::mt19937 mt(rd());
     std::uniform_int_distribution<uintT> dist(0, maxDegree);
 
-    for (uintT v_i=0; v_i < GA.n; v_i++)
+    parallel_for (uintT i = 0; i < numVertices; i++)
     {
-        colorData[v_i] = dist(mt);
-    }
-}
-
-
-// Naive coloring implementation
-// active vertices, and time
-template <class vertex>
-void Compute(graph<vertex> &GA, commandLine P)
-{
-    uintT numVertices = GA.n;
-    std::vector<uintT> colorData(numVertices, 0);
-    // randomizeVertexValues(GA, colorData);
-    
-    std::vector<DenseBitset*> possibleValues(numVertices);
-    parallel_for(uintT v_i=0; v_i < numVertices; v_i++)
-    {
-        possibleValues[v_i] = new DenseBitset(GA.V[v_i].getOutDegree());
+        // possibleColors[i] = new bool[maxDegree + 1]();
+        colorData[i] = dist(mt);
     }
 
     // Verbose variables
     bool verbose = true;
-    uint32_t activeVertices;
-    uint32_t activeEdges;
+    uintT activeVertices;
+    uintT activeEdges;
     timer fullTimer, iterTimer;
     fullTimer.start();
     double lastStopTime = iterTimer.getTime();
@@ -119,7 +204,6 @@ void Compute(graph<vertex> &GA, commandLine P)
     while (true)
     {
         iter++;
-
         // Check if schedule is empty and break out of loop if it is
         if (currentSchedule.anyScheduledTasks() == false)
         {
@@ -142,40 +226,41 @@ void Compute(graph<vertex> &GA, commandLine P)
         {
             if (currentSchedule.isScheduled(v_i))
             {
-                // std::cout << "vertex: " << v_i << std::endl; // Debug
-                
                 // Get current vertex's neighbours
-                uintT vDegree = GA.V[v_i].getOutDegree();
-                uintT vMaxValue = vDegree + 1;
+                const uintT vDegree = GA.V[v_i].getOutDegree();
+                const Color vMaxColor = vDegree + 1;
                 bool scheduleNeighbors = false;
                 activeEdges += vDegree;
-                
                 // Make bool array for possible color values and then set any color
-                // already taken by neighbours to false 
+                // already taken by neighbours to false
+                std::vector<bool> possibleColors(maxDegree + 1, true);
+                // possibleColors[i] = new bool[maxDegree + 1]();
                 
-                possibleValues[v_i]->setAll();
-                // bool possibleValues[4847571] = { false };
-                // std::vector<bool> possibleValues(vMaxValue, true);
+                // for (size_t c_i = 0; c_i < vDegree; c_i++)
+                // {
+                //     possibleColors[v_i][c_i] = true;//.setAll();
+                // }
+                
                 parallel_for(uintT n_i = 0; n_i < vDegree; n_i++)
                 {
                     uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                    uintT neighVal = colorData[neigh];//.color;
-                    possibleValues[v_i]->set(neighVal, false);
-                    // possibleValues[neighVal] = false; 
+                    Color neighVal = colorData[neigh];
+                    // possibleColors[v_i][neighVal.color] = false;   
+                    possibleColors[neighVal.color] = false;           
                 }
-                // std::cout << std::endl; // Debug
 
                 // Find minimum color by iterating through color array in increasing order
-                uintT newColor = 0;
-                uintT currentColor = colorData[v_i];//.color; 
-                while (newColor < vMaxValue)
+                Color newColor(0);
+                Color currentColor = colorData[v_i]; 
+                while (newColor < vMaxColor)
                 {                    
                     // If color is available and it is not the vertex's current value then try to assign
-                    if (possibleValues[v_i]->get(newColor))
+                    // if (possibleColors[v_i][newColor.color])
+                    if (possibleColors[newColor.color])
                     {
                         if (currentColor != newColor)
                         {
-                            colorData[v_i] = newColor;//.color = newColor;
+                            colorData[v_i] = newColor;
                             scheduleNeighbors = true;
                         }
                         break;
@@ -186,7 +271,7 @@ void Compute(graph<vertex> &GA, commandLine P)
                 // Schedule all neighbours if required
                 if (scheduleNeighbors)
                 {
-                    for (uintT n_i = 0; n_i < vDegree; n_i++)
+                    parallel_for (uintT n_i = 0; n_i < vDegree; n_i++)
                     {
                         uintT i = GA.V[v_i].getOutNeighbor(n_i);
                         currentSchedule.schedule(i, false);
@@ -194,7 +279,6 @@ void Compute(graph<vertex> &GA, commandLine P)
                 }
             }
         }
-
         if (verbose)
         {
             std::cout << "\tActive Vs: " << activeVertices << std::endl;
@@ -202,21 +286,15 @@ void Compute(graph<vertex> &GA, commandLine P)
             std::cout << "\tTime: " << setprecision(TIME_PRECISION) << iterTimer.getTime() - lastStopTime << std::endl;
             lastStopTime = iterTimer.getTime();
         }
-
-        // nanosleep((const struct timespec[]){{0, 500000000L}}, NULL);
     }
     if (verbose)
     {
         cout << "\nTotal Time : " << setprecision(TIME_PRECISION) << fullTimer.stop() << "\n";
     }
 
-    parallel_for(uintT v_i=0; v_i < numVertices; v_i++)
-    {
-        free(possibleValues[v_i]);
-    }
-
-    // assessGraph(GA, colorData);
-    // free(colorData);
+    // Assess graph and cleanup
+    assessGraph(GA, maxDegree);
+    delete[] colorData;
 }
 
 
