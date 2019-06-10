@@ -208,50 +208,53 @@ void serialPass(graph<vertex> &GA, BitsetScheduler &currentSchedule, uintT maxDe
     // Parallel loop where each vertex is assigned a color
     for(uintT v_i = 0; v_i < numVertices; v_i++)
     {
-        // Get current vertex's neighbours
-        const uintT outVDegree = GA.V[v_i].getOutDegree();
-        const Color vMaxColor = outVDegree + 1;
-        bool scheduleNeighbors = false;
-
-        // Make bool array for possible color values and then set any color
-        // already taken by neighbours to false
-        std::vector<bool> possibleColors(maxDegree + 1, true);
-        std::vector<Color> neighColors(outVDegree);
-        
-        for(uintT n_i = 0; n_i < outVDegree; n_i++)
+        if (currentSchedule.isScheduled(v_i))
         {
-            uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-            Color neighVal = colorData[neigh];
-            possibleColors[neighVal.color] = false;
-            neighColors[n_i] = neighVal;          
-        }
+            // Get current vertex's neighbours
+            const uintT outVDegree = GA.V[v_i].getOutDegree();
+            const Color vMaxColor = outVDegree + 1;
+            bool scheduleNeighbors = false;
 
-        // Find minimum color by iterating through color array in increasing order
-        Color newColor(0);
-        Color currentColor = colorData[v_i]; 
-        while (newColor < vMaxColor)
-        {                    
-            // If color is available and it is not the vertex's current value then try to assign
-            if (possibleColors[newColor.color])
+            // Make bool array for possible color values and then set any color
+            // already taken by neighbours to false
+            std::vector<bool> possibleColors(maxDegree + 1, true);
+            // std::vector<Color> neighColors(outVDegree);
+            
+            for(uintT n_i = 0; n_i < outVDegree; n_i++)
             {
-                if (currentColor != newColor)
-                {
-                    colorData[v_i] = newColor;
-                    scheduleNeighbors = true;
-                }
-                break;
+                uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
+                Color neighVal = colorData[neigh];
+                possibleColors[neighVal.color] = false;
+                // neighColors[n_i] = neighVal;          
             }
-            newColor++;
-        }
 
-        // Schedule all neighbours if required
-        if (scheduleNeighbors)
-        {
-            for (uintT n_i = 0; n_i < outVDegree; n_i++)
+            // Find minimum color by iterating through color array in increasing order
+            Color newColor(0);
+            Color currentColor = colorData[v_i]; 
+            while (newColor < vMaxColor)
+            {                    
+                // If color is available and it is not the vertex's current value then try to assign
+                if (possibleColors[newColor.color])
+                {
+                    if (currentColor != newColor)
+                    {
+                        colorData[v_i] = newColor;
+                        scheduleNeighbors = true;
+                    }
+                    break;
+                }
+                newColor++;
+            }
+
+            // Schedule all neighbours if required
+            if (scheduleNeighbors)
             {
-                uintT i = GA.V[v_i].getOutNeighbor(n_i);
-                if (neighColors[n_i] > newColor)
+                for (uintT n_i = 0; n_i < outVDegree; n_i++)
+                {
+                    uintT i = GA.V[v_i].getOutNeighbor(n_i);
+                    // if (neighColors[n_i] > newColor)
                     currentSchedule.schedule(i, false);
+                }
             }
         }
     }
@@ -284,21 +287,21 @@ void Compute(graph<vertex> &GA, commandLine P)
     const size_t numVertices = GA.n;
     colorData = new Color[numVertices];
     const uintT maxDegree = getMaxDeg(GA);
-    randomizeColors(GA);
+    // randomizeColors(GA);
 
     // Verbose variables
     bool verbose = true;
     uintT activeVertices;
     uintT activeEdges;
     timer fullTimer, iterTimer;
-    fullTimer.start();
-    double lastStopTime = iterTimer.getTime();
 
     // Make new scheduler and schedule all vertices
     BitsetScheduler currentSchedule(numVertices);
     currentSchedule.reset();
     currentSchedule.scheduleAll();
 
+    fullTimer.start();
+    double lastStopTime = iterTimer.getTime();
     // Loop over vertices until nothing is scheduled
     uint64_t iter = 0;
     while (true)
@@ -336,20 +339,20 @@ void Compute(graph<vertex> &GA, commandLine P)
                 // Make bool array for possible color values and then set any color
                 // already taken by neighbours to false
                 std::vector<bool> possibleColors(maxDegree + 1, true);
-                std::vector<Color> neighColors(vDegree);
+                // std::vector<Color> neighColors(vDegree);
                 
                 parallel_for(uintT n_i = 0; n_i < vDegree; n_i++)
                 {
                     uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
                     Color neighVal = colorData[neigh];
                     possibleColors[neighVal.color] = false;
-                    neighColors[n_i] = neighVal;          
+                    // neighColors[n_i] = neighVal;          
                 }
 
                 // Find minimum color by iterating through color array in increasing order
                 Color newColor(0);
                 Color currentColor = colorData[v_i]; 
-                while (newColor < vMaxColor)
+                while (newColor <= vMaxColor)
                 {                    
                     // If color is available and it is not the vertex's current value then try to assign
                     if (possibleColors[newColor.color])
