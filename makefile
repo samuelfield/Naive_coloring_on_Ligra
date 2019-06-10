@@ -22,32 +22,31 @@ ifdef LOWMEM
 MEM = -DLOWMEM
 endif
 
-PCFLAGS = -std=c++14 -fcilkplus -lcilkrts -O3 -DCILK $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
-# PCFLAGS = -std=c++14 -fcilkplus -lcilkrts -g -DCILK $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
-PLFLAGS = -fcilkplus -lcilkrts
-
-EXE = color.app
 
 SRC_DIR = src
 OBJ_DIR = obj
-
-SRC = $(wildcard $(SRC_DIR)/*.cc)
-OBJ = $(SRC:$(SRC_DIR)/%.cc=$(OBJ_DIR)/%.o)
 
 LDLIBS += -lcilkrts -fcilkplus
 CPPFLAGS += -Iinclude -isystem ligra
 # CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -O3 -DCILK $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
 CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -g -DCILK $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
 
+
+
 .PHONY: all clean
 
-all: $(EXE)
+ALL: color_l.app color_n.app color_serial.app
 
-$(EXE): $(OBJ)
-	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o $@
+all: $(ALL)
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cc
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+color_l.app: $(SRC_DIR)/coloring_asynch_locks.cc
+	$(CXX) -o color_l.app $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/coloring_asynch_locks.cc
 
-clean:
-	$(RM) $(OBJ)
+color_n.app: $(SRC_DIR)/coloring_asynch_naive.cc
+	$(CXX) -o color_n.app $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/coloring_asynch_naive.cc
+
+color_serial.app: $(SRC_DIR)/coloring_serial_naive.cc
+	$(CXX) -o color_serial.app $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/coloring_serial_naive.cc
+
+clean: $(ALL)
+	rm -f $(OBJ_DIR)/*.o color_l.app color_n.app 
