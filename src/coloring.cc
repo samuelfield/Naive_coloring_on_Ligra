@@ -199,10 +199,88 @@ void randomizeColors(graph<vertex> &GA)
     }
 }
 
+template <class vertex>
+void serialPass(graph<vertex> &GA, BitsetScheduler &currentSchedule, uintT maxDegree)
+{
+    uintT numVertices = GA.n; 
+    currentSchedule.newIteration();
+    
+    // Parallel loop where each vertex is assigned a color
+    for(uintT v_i = 0; v_i < numVertices; v_i++)
+    {
+        // Get current vertex's neighbours
+        const uintT outVDegree = GA.V[v_i].getOutDegree();
+        const Color vMaxColor = outVDegree + 1;
+        bool scheduleNeighbors = false;
+
+        // Make bool array for possible color values and then set any color
+        // already taken by neighbours to false
+        std::vector<bool> possibleColors(maxDegree + 1, true);
+        std::vector<Color> neighColors(outVDegree);
+        
+        for(uintT n_i = 0; n_i < outVDegree; n_i++)
+        {
+            uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
+            Color neighVal = colorData[neigh];
+            possibleColors[neighVal.color] = false;
+            neighColors[n_i] = neighVal;          
+        }
+
+        // Find minimum color by iterating through color array in increasing order
+        Color newColor(0);
+        Color currentColor = colorData[v_i]; 
+        while (newColor < vMaxColor)
+        {                    
+            // If color is available and it is not the vertex's current value then try to assign
+            if (possibleColors[newColor.color])
+            {
+                if (currentColor != newColor)
+                {
+                    colorData[v_i] = newColor;
+                    scheduleNeighbors = true;
+                }
+                break;
+            }
+            newColor++;
+        }
+
+        // Schedule all neighbours if required
+        if (scheduleNeighbors)
+        {
+            for (uintT n_i = 0; n_i < outVDegree; n_i++)
+            {
+                uintT i = GA.V[v_i].getOutNeighbor(n_i);
+                if (neighColors[n_i] > newColor)
+                    currentSchedule.schedule(i, false);
+            }
+        }
+    }
+}
+
+//Check graph is undirected
+template <class vertex>
+void ensureUndirected(graph<vertex> &GA)
+{
+    for(uintT v_i = 0; v_i < GA.n; v_i++)
+    { 
+        const uintT outVDegree = GA.V[v_i].getOutDegree();
+        const uintT inVDegree = GA.V[v_i].getInDegree();
+
+        if (outVDegree != inVDegree)
+        {
+            cout << "Graph is not undirected. Exiting..." << endl;
+            exit(2);
+        }
+    }
+}
+
 // Naive coloring implementation
 template <class vertex>
 void Compute(graph<vertex> &GA, commandLine P)
 {
+    // Check that graph is undirected (out degree == in degree for all vertices)
+    ensureUndirected(GA);
+    
     const size_t numVertices = GA.n;
     colorData = new Color[numVertices];
     const uintT maxDegree = getMaxDeg(GA);
@@ -291,9 +369,8 @@ void Compute(graph<vertex> &GA, commandLine P)
                 {
                     parallel_for (uintT n_i = 0; n_i < vDegree; n_i++)
                     {
-                        uintT i = GA.V[v_i].getOutNeighbor(n_i);
-                        if (neighColors[n_i] >= newColor)
-                            currentSchedule.schedule(i, false);
+                        uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
+                        currentSchedule.schedule(neigh, false);
                     }
                 }
             }
