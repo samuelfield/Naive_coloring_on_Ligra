@@ -123,10 +123,10 @@ void assessGraph(graph<vertex> &GA, uintT maxDegree)
         Color vValue = colorData[v_i];  
         uintT vDegree = GA.V[v_i].getOutDegree();
         std::vector<bool> possibleColors(maxDegree + 1, true);
-        Color minimalColor = 0;
-        bool neighConflict = false;
 
-        parallel_for(uintT n_i = 0; n_i < vDegree; n_i++)
+        // Check for conflict and set possible colors
+        bool neighConflict = false;
+        for(uintT n_i = 0; n_i < vDegree; n_i++)
         {
             uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
             Color neighVal = colorData[neigh];
@@ -140,6 +140,8 @@ void assessGraph(graph<vertex> &GA, uintT maxDegree)
         if (neighConflict)
             conflict++;
 
+        // Check for minimality
+        Color minimalColor = 0;
         while (!possibleColors[minimalColor.color] && (minimalColor < vDegree + 1))
         {
             minimalColor++;

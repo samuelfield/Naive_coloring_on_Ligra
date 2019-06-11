@@ -20,7 +20,7 @@ void Compute(graph<vertex> &GA, commandLine P)
     // Make new scheduler and schedule all vertices
     BitsetScheduler currentSchedule(numVertices);
     currentSchedule.reset();
-    currentSchedule.scheduleAll();
+    currentSchedule.scheduleAll(false);
 
     fullTimer.start();
     double lastStopTime = iterTimer.getTime();
@@ -54,7 +54,6 @@ void Compute(graph<vertex> &GA, commandLine P)
             {
                 // Get current vertex's neighbours
                 const uintT vDegree = GA.V[v_i].getOutDegree();
-                const Color vMaxColor = vDegree + 1;
                 bool scheduleNeighbors = false;
                 
                 activeEdges += vDegree;
@@ -62,20 +61,18 @@ void Compute(graph<vertex> &GA, commandLine P)
                 // Make bool array for possible color values and then set any color
                 // already taken by neighbours to false
                 std::vector<bool> possibleColors(maxDegree + 1, true);
-                // std::vector<Color> neighColors(vDegree);
                 
-                parallel_for(uintT n_i = 0; n_i < vDegree; n_i++)
+                for (uintT n_i = 0; n_i < vDegree; n_i++)
                 {
                     uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
                     Color neighVal = colorData[neigh];
-                    possibleColors[neighVal.color] = false;
-                    // neighColors[n_i] = neighVal;          
+                    possibleColors[neighVal.color] = false;  
                 }
 
                 // Find minimum color by iterating through color array in increasing order
                 Color newColor(0);
                 Color currentColor = colorData[v_i]; 
-                while (newColor <= vMaxColor)
+                while (newColor.color <= vDegree)
                 {                    
                     // If color is available and it is not the vertex's current value then try to assign
                     if (possibleColors[newColor.color])
@@ -85,6 +82,7 @@ void Compute(graph<vertex> &GA, commandLine P)
                             colorData[v_i] = newColor;
                             scheduleNeighbors = true;
                         }
+
                         break;
                     }
                     newColor++;
@@ -93,9 +91,10 @@ void Compute(graph<vertex> &GA, commandLine P)
                 // Schedule all neighbours if required
                 if (scheduleNeighbors)
                 {
-                    parallel_for(uintT n_i = 0; n_i < vDegree; n_i++)
+                    for(uintT n_i = 0; n_i < vDegree; n_i++)
                     {
                         uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
+                        // if (neighColors[n_i] > newColor)
                         currentSchedule.schedule(neigh, false);
                     }
                 }

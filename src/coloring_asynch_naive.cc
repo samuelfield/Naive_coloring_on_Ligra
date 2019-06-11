@@ -87,14 +87,12 @@ void Compute(graph<vertex> &GA, commandLine P)
                 // Make bool array for possible color values and then set any color
                 // already taken by neighbours to false
                 std::vector<bool> possibleColors(maxDegree + 1, true);
-                // std::vector<Color> neighColors(vDegree);
                 
-                parallel_for(uintT n_i = 0; n_i < vDegree; n_i++)
+                for(uintT n_i = 0; n_i < vDegree; n_i++)
                 {
                     uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
                     Color neighVal = colorData[neigh];
-                    possibleColors[neighVal.color] = false;
-                    // neighColors[n_i] = neighVal;          
+                    possibleColors[neighVal.color] = false;         
                 }
 
                 // Find minimum color by iterating through color array in increasing order
@@ -107,9 +105,9 @@ void Compute(graph<vertex> &GA, commandLine P)
                     {
                         if (currentColor != newColor)
                         {
-                            colorData[v_i] = newColor;
                             scheduleNeighbors = true;
                         }
+                        colorData[v_i] = newColor;
                         break;
                     }
                     newColor++;

@@ -49,4 +49,4 @@ color_serial.app: $(SRC_DIR)/coloring_serial_naive.cc
 	$(CXX) -o color_serial.app $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/coloring_serial_naive.cc
 
 clean: $(ALL)
-	rm -f $(OBJ_DIR)/*.o color_l.app color_n.app 
+	rm -f $(OBJ_DIR)/*.o color_l.app color_n.app color_serial.app
