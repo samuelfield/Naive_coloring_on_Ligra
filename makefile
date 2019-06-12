@@ -28,8 +28,8 @@ OBJ_DIR = obj
 
 LDLIBS += -lcilkrts -fcilkplus
 CPPFLAGS += -Iinclude -isystem ligra
-# CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -O3 -DCILK $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
-CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -g -DCILK $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
+CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -O3 -DCILK $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
+# CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -g -DCILK $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
 
 
 

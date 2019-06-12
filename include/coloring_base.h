@@ -27,6 +27,7 @@
 #include <mutex>
 #include <vector>
 #include <random>
+#include <ctime>
 
 #include "bitsetscheduler.h"
 #include "ligra.h"
@@ -34,17 +35,61 @@
 
 #define TIME_PRECISION 3
 
+uintT vertexPriority;
+
+struct ReadersWriterLock
+{
+    std::mutex readers;
+    std::mutex writer;
+    uintT blockers;
+
+    ReadersWriterLock() : readers(), writer(), blockers(0) {}
+
+    void BeginRead ()
+    {
+        std::lock_guard<std::mutex> lock(readers);
+        blockers++;
+        if (blockers == 1)
+            writer.lock();
+    }
+
+    void EndRead ()
+    {
+        std::lock_guard<std::mutex> lock(readers);
+        blockers--;
+        if (blockers == 0)
+            writer.unlock();
+    }
+
+    void BeginWrite() {writer.lock();}
+
+    void EndWrite() {writer.unlock();}      
+};
 
 struct Color
 {
-    uint64_t color;
+    uintT color;
+    ReadersWriterLock rwLock;
+    uintT priority;
 
-    Color() : color(0) {}
-    Color(uint64_t val) : color(val) {}
+    Color() : color(0), rwLock() {
+        priority = vertexPriority;
+        vertexPriority++;
+    }
+    Color(uint64_t val) : color(val), rwLock()
+    {
+        priority = vertexPriority;
+        vertexPriority++;
+    }
+    Color(const Color &rhs) : color(rhs.color), rwLock()
+    {
+        priority = rhs.priority;
+    }
 
     inline Color operator=(const Color &rhs)
     {
         color = rhs.color;
+        priority = rhs.priority;
         return *this;
     }
 
