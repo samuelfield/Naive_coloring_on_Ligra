@@ -22,7 +22,7 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "coloring_base.h"
+#include "coloring_base_locks.h"
 
 
 // Naive coloring implementation
@@ -87,12 +87,30 @@ void Compute(graph<vertex> &GA, commandLine P)
                 // Make bool array for possible color values and then set any color
                 // already taken by neighbours to false
                 std::vector<bool> possibleColors(maxDegree + 1, true);
-                
+
+                // Get write lock on self and reader locks on all neighbours
+                colorData[v_i].rwLock.BeginWrite();
                 for(uintT n_i = 0; n_i < vDegree; n_i++)
+                {
+                    while(!colorData[n_i].rwLock.BeginRead())
+                    {
+                        if (colorData[v_i].priority < colorData[n_i].priority)
+                        {
+                            colorData[v_i].rwLock.EndWrite();
+                            colorData[v_i].rwLock.BeginWrite();
+                        }
+
+                        // while(!colorData[n_i].rwLock.BeginRead()) {}
+
+                    }
+                }
+                
+                parallel_for (uintT n_i = 0; n_i < vDegree; n_i++)
                 {
                     uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
                     Color neighVal = colorData[neigh];
-                    possibleColors[neighVal.color] = false; // Probably race condition here without locks
+                    if (possibleColors[neighVal.color]) 
+                        possibleColors[neighVal.color] = false; // Probably race condition here without locks
                 }
 
                 // Find minimum color by iterating through color array in increasing order
@@ -105,12 +123,19 @@ void Compute(graph<vertex> &GA, commandLine P)
                     {
                         if (currentColor != newColor)
                         {
+                            colorData[v_i] = newColor;
                             scheduleNeighbors = true;
                         }
-                        colorData[v_i] = newColor;
                         break;
                     }
                     newColor++;
+                }
+
+                // Release locks
+                colorData[v_i].rwLock.EndWrite();
+                for(uintT n_i = 0; n_i < vDegree; n_i++)
+                {
+                    colorData[n_i].rwLock.EndRead();
                 }
 
                 // Schedule all neighbours if required

@@ -91,8 +91,9 @@ void Compute(graph<vertex> &GA, commandLine P)
                 for(uintT n_i = 0; n_i < vDegree; n_i++)
                 {
                     uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                    Color neighVal = colorData[neigh];
-                    possibleColors[neighVal.color] = false; // Probably race condition here without locks         
+                    Color neighVal = colorData[neigh]; // Probably race condition here without locks   
+                    if (possibleColors[neighVal.color]) // Add check to avoid false sharing
+                        possibleColors[neighVal.color] = false;      
                 }
 
                 // Find minimum color by iterating through color array in increasing order

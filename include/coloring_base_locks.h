@@ -35,17 +35,78 @@
 
 #define TIME_PRECISION 3
 
+uintT vertexPriority;
+
+struct ReadersWriterLock
+{
+    std::mutex readers;
+    std::mutex writer;
+    uintT blockers;
+
+    ReadersWriterLock() : readers(), writer(), blockers(0) {}
+
+    bool BeginRead ()
+    {
+        if(readers.try_lock())
+        {
+            blockers++;
+            if (blockers == 1)
+                writer.lock();
+            readers.unlock();
+            return true;
+        }        
+        else
+        {
+            return false;
+        }
+    }
+
+    void EndRead ()
+    {
+        readers.lock();
+        blockers--;
+        if (blockers == 0)
+            writer.unlock();
+        readers.unlock();
+    }
+
+    void BeginWrite()
+    {
+        writer.lock();
+        readers.lock();
+    }
+
+    void EndWrite()
+    {
+        readers.unlock();
+        writer.unlock();
+    }      
+};
+
 struct Color
 {
     uintT color;
+    ReadersWriterLock rwLock;
+    uintT priority;
 
-    Color() : color(0) {}
-    Color(uint64_t val) : color(val){}
-    Color(const Color &rhs) : color(rhs.color){}
+    Color() : color(0), rwLock() {
+        priority = vertexPriority;
+        vertexPriority++;
+    }
+    Color(uint64_t val) : color(val), rwLock()
+    {
+        priority = vertexPriority;
+        vertexPriority++;
+    }
+    Color(const Color &rhs) : color(rhs.color), rwLock()
+    {
+        priority = rhs.priority;
+    }
 
     inline Color operator=(const Color &rhs)
     {
         color = rhs.color;
+        priority = rhs.priority;
         return *this;
     }
 
