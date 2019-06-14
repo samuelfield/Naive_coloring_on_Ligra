@@ -65,21 +65,21 @@ void Compute(graph<vertex> &GA, commandLine P)
                 for (uintT n_i = 0; n_i < vDegree; n_i++)
                 {
                     uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                    Color neighVal = colorData[neigh];
-                    possibleColors[neighVal.color] = false;  
+                    uintT neighVal = colorData[neigh].color;
+                    possibleColors[neighVal] = false;  
                 }
 
                 // Find minimum color by iterating through color array in increasing order
-                Color newColor(0);
-                Color currentColor = colorData[v_i]; 
-                while (newColor.color <= vDegree)
+                uintT newColor = 0;
+                uintT currentColor = colorData[v_i].color; 
+                while (newColor <= vDegree)
                 {                    
                     // If color is available and it is not the vertex's current value then try to assign
-                    if (possibleColors[newColor.color])
+                    if (possibleColors[newColor])
                     {
                         if (currentColor != newColor)
                         {
-                            colorData[v_i] = newColor;
+                            colorData[v_i].color = newColor;
                             scheduleNeighbors = true;
                         }
 

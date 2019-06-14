@@ -43,12 +43,6 @@ struct Color
     Color(uint64_t val) : color(val){}
     Color(const Color &rhs) : color(rhs.color){}
 
-    inline Color operator=(const Color &rhs)
-    {
-        color = rhs.color;
-        return *this;
-    }
-
     // prefix
     inline Color& operator++()
     {
@@ -219,4 +213,50 @@ void ensureUndirected(graph<vertex> &GA)
             exit(2);
         }
     }
+}
+
+template <class vertex>
+void onePassColoring(graph<vertex> &GA,
+                     std::vector<std::vector<uintT>> &partition,
+                     Color* &colorData,
+                     uintT maxDegree)
+{
+    const size_t numVertices = GA.n;
+    partition.resize(maxDegree);
+    for(uintT v_i = 0; v_i < numVertices; v_i++)
+    {
+        // Get current vertex's neighbours
+        const uintT vDegree = GA.V[v_i].getOutDegree();        
+
+        // Make bool array for possible color values and then set any color
+        // already taken by neighbours to false
+        std::vector<bool> possibleColors(maxDegree + 1, true);
+        
+        for (uintT n_i = 0; n_i < vDegree; n_i++)
+        {
+            uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
+            Color neighVal = colorData[neigh];
+            possibleColors[neighVal.color] = false;  
+        }
+
+        // Find minimum color by iterating through color array in increasing order
+        uintT newColor = 0;
+        uintT currentColor = 0; 
+        while (newColor <= vDegree)
+        {                    
+            // If color is available and it is not the vertex's current value then try to assign
+            if (possibleColors[newColor])
+            {
+                if (currentColor != newColor)
+                {
+                    colorData[v_i].color = newColor;
+                    partition[newColor].push_back(v_i);
+                }
+
+                break;
+            }
+            newColor++;
+        }
+    }
+    partition.shrink_to_fit();
 }

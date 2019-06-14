@@ -36,6 +36,10 @@ void Compute(graph<vertex> &GA, commandLine P)
     Color* colorData = new Color[numVertices];
     const uintT maxDegree = getMaxDeg(GA);
 
+    // Make partition by coloring
+    std::vector<std::vector<uintT>> partition(1);
+    onePassColoring(GA, partition, colorData, maxDegree);
+
     // Verbose variables
     bool verbose = true;
     uintT activeVertices;

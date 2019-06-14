@@ -35,12 +35,15 @@ CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -O3 -DCILK -lpthread $(INTT) $
 
 .PHONY: all clean
 
-ALL: color_l.app color_n.app color_serial.app
+ALL: color_l.app color_n.app color_serial.app color_lf.app
 
 all: $(ALL)
 
 color_l.app: $(SRC_DIR)/coloring_asynch_locks.cc
 	$(CXX) -o color_l.app $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/coloring_asynch_locks.cc
+
+color_lf.app: $(SRC_DIR)/coloring_asynch_lockfree.cc
+	$(CXX) -o color_lf.app $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/coloring_asynch_lockfree.cc
 
 color_n.app: $(SRC_DIR)/coloring_asynch_naive.cc
 	$(CXX) -o color_n.app $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/coloring_asynch_naive.cc
@@ -48,5 +51,7 @@ color_n.app: $(SRC_DIR)/coloring_asynch_naive.cc
 color_serial.app: $(SRC_DIR)/coloring_serial_naive.cc
 	$(CXX) -o color_serial.app $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/coloring_serial_naive.cc
 
+
+
 clean: $(ALL)
-	rm -f $(OBJ_DIR)/*.o color_l.app color_n.app color_serial.app
+	rm -f $(OBJ_DIR)/*.o color_l.app color_n.app color_serial.app color_lf.app
