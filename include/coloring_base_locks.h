@@ -95,20 +95,21 @@ struct Color
     uintT color;
     RWLock rwLock;
     uintT priority;
+    uintT degree;
 
-    Color() : color(0)
+    Color() : color(0), degree(0)
     {
         priority = vertexPriority;
         vertexPriority++;
         rwLock.init();
     }
-    Color(uint64_t val) : color(val)
+    Color(uint64_t val) : color(val), degree(0)
     {
         priority = vertexPriority;
         vertexPriority++;
         rwLock.init();
     }
-    Color(const Color &rhs) : color(rhs.color)
+    Color(const Color &rhs) : color(rhs.color), degree(0)
     {
         priority = rhs.priority;
     }
@@ -116,6 +117,7 @@ struct Color
     inline Color operator=(const Color &rhs)
     {
         color = rhs.color;
+        color = rhs.degree;
         priority = rhs.priority;
         return *this;
     }
@@ -214,7 +216,10 @@ bool GetPossibleColors( const graph<vertex> &GA,
             if (result == EBUSY)
             {
                 // Die if lower priority than neighbour
-                if (colorData[v_i].priority < colorData[neigh].priority)
+                // if (colorData[v_i].priority < colorData[neigh].priority)
+                if (colorData[v_i].degree < colorData[neigh].degree || 
+                    (colorData[v_i].degree == colorData[neigh].degree &&
+                    colorData[v_i].priority < colorData[neigh].priority))
                 {
                     // Release any locks that have been obtained
                     colorData[v_i].rwLock.unlock();
@@ -305,15 +310,15 @@ void assessGraph(graph<vertex> &GA, Color* &colorData, uintT maxDegree)
 
 // Find the maximum degree amongst nodes of the graph
 template <class vertex>
-uintT getMaxDeg(const graph<vertex> &GA)
+uintT setDegrees(const graph<vertex> &GA, Color* &colorData)
 {
     uintT maxDegree = 0;
-    // TODO: look into parallelizing this loop with CAS
     for (uintT v_i=0; v_i < GA.n; v_i++)
     {
-        if (GA.V[v_i].getOutDegree() > maxDegree)
+        colorData[v_i].degree = GA.V[v_i].getOutDegree();
+        if (colorData[v_i].degree > maxDegree)
         {
-            maxDegree = GA.V[v_i].getOutDegree();
+            maxDegree = colorData[v_i].degree;
         }
     }
     return maxDegree;

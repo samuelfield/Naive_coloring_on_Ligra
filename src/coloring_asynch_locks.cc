@@ -34,7 +34,7 @@ void Compute(graph<vertex> &GA, commandLine P)
 
     const size_t numVertices = GA.n;
     Color* colorData = new Color[numVertices];
-    const uintT maxDegree = getMaxDeg(GA);
+    const uintT maxDegree = setDegrees(GA, colorData);
 
     // Verbose variables
     bool verbose = true;
@@ -79,10 +79,10 @@ void Compute(graph<vertex> &GA, commandLine P)
             {
                 // Get current vertex's neighbours
                 const uintT vDegree = GA.V[v_i].getOutDegree();
-                const Color vMaxColor = vDegree + 1;
+                const uintT vMaxColor = vDegree + 1;
                 bool scheduleNeighbors = false;
-                Color newColor(0);
-                Color currentColor = colorData[v_i]; 
+                uintT newColor = 0;
+                uintT currentColor = colorData[v_i].color; 
                 
                 activeEdges += vDegree;
 
@@ -90,18 +90,18 @@ void Compute(graph<vertex> &GA, commandLine P)
                 // already taken by neighbours to false
                 std::vector<bool> possibleColors(maxDegree + 1, true);
 
-                // Get write lock on self and reader locks on all neighbours
+                // Get colors (need write lock on self and reader locks on all neighbours)
                 while (!GetPossibleColors(GA, colorData, possibleColors, v_i)) {}
                 
                 // Find minimum color by iterating through color array in increasing order
                 while (newColor <= vMaxColor)
                 {                    
                     // If color is available and it is not the vertex's current value then try to assign
-                    if (possibleColors[newColor.color])
+                    if (possibleColors[newColor])
                     {
                         if (currentColor != newColor)
                         {
-                            colorData[v_i] = newColor;
+                            colorData[v_i].color = newColor;
                             scheduleNeighbors = true;
                         }
                         break;
