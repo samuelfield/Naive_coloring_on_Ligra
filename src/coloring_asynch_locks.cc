@@ -81,6 +81,8 @@ void Compute(graph<vertex> &GA, commandLine P)
                 const uintT vDegree = GA.V[v_i].getOutDegree();
                 const Color vMaxColor = vDegree + 1;
                 bool scheduleNeighbors = false;
+                Color newColor(0);
+                Color currentColor = colorData[v_i]; 
                 
                 activeEdges += vDegree;
 
@@ -89,19 +91,9 @@ void Compute(graph<vertex> &GA, commandLine P)
                 std::vector<bool> possibleColors(maxDegree + 1, true);
 
                 // Get write lock on self and reader locks on all neighbours
-                while (!obtainLocks(GA, colorData, v_i)) {}
+                while (!GetPossibleColors(GA, colorData, possibleColors, v_i)) {}
                 
-                parallel_for (uintT n_i = 0; n_i < vDegree; n_i++)
-                {
-                    uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                    Color neighVal = colorData[neigh];
-                    if (possibleColors[neighVal.color]) 
-                        possibleColors[neighVal.color] = false;
-                }
-
                 // Find minimum color by iterating through color array in increasing order
-                Color newColor(0);
-                Color currentColor = colorData[v_i]; 
                 while (newColor <= vMaxColor)
                 {                    
                     // If color is available and it is not the vertex's current value then try to assign

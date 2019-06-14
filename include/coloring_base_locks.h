@@ -195,46 +195,49 @@ void releaseLocks(graph<vertex> &GA, Color* &colorData, const uint v_i)
 }
 
 template <class vertex>
-bool obtainLocks(graph<vertex> &GA, Color* &colorData, const uint v_i)
+bool GetPossibleColors( const graph<vertex> &GA,
+                        Color* &colorData,
+                        std::vector<bool> &possibleColors,
+                        const uint v_i)
 {
     const uintT vDegree = GA.V[v_i].getOutDegree();
     uintT neigh;
+    int result;
 
     // Get write lock on self and reader locks on all neighbours
     colorData[v_i].rwLock.writeLock();
-    // colorData[v_i].rwLock.BeginWrite();
     for(uintT n_i = 0; n_i < vDegree; n_i++)
     {
         neigh = GA.V[v_i].getOutNeighbor(n_i);
-        while (true)
+        while ((result = colorData[neigh].rwLock.tryReadLock()) != 0)
         {
-            int result = colorData[neigh].rwLock.tryReadLock();
-            // bool result = colorData[neigh].rwLock.BeginRead();
-            if (result == 0)
-                break;
-            else if (result == EBUSY)
+            if (result == EBUSY)
             {
                 // Die if lower priority than neighbour
                 if (colorData[v_i].priority < colorData[neigh].priority)
                 {
                     // Release any locks that have been obtained
                     colorData[v_i].rwLock.unlock();
-                    // colorData[v_i].rwLock.EndWrite();
-                    for(uintT rev_i = n_i; rev_i >= 0 && rev_i <= n_i; rev_i--)
+
+                    // Release locks from 1 before the conflict to beginning
+                    for(uintT rev_i = n_i - 1; rev_i >= 0 && rev_i <= n_i; rev_i--)
                     {
+                        // cout << v_i << ": " << rev_i << endl;
                         uintT rev_neigh = GA.V[v_i].getOutNeighbor(rev_i);
                         colorData[rev_neigh].rwLock.unlock();
-                        // colorData[rev_neigh].rwLock.EndRead();
                     }
                     return false;
                 }
             }    
             else
             {
-                cout << result << endl;
+                cout << "Locking Error: " << result << endl;
                 exit(0);
             }                  
         }
+
+        uintT neighVal = colorData[neigh].color;
+        possibleColors[neighVal] = false;  
     }
 
     return true;
