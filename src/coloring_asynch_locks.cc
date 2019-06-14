@@ -115,7 +115,7 @@ void Compute(graph<vertex> &GA, commandLine P)
                 // Schedule all neighbours if required
                 if (scheduleNeighbors)
                 {
-                    parallel_for (uintT n_i = 0; n_i < vDegree; n_i++)
+                    for (uintT n_i = 0; n_i < vDegree; n_i++)
                     {
                         uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
                         currentSchedule.schedule(neigh, false);

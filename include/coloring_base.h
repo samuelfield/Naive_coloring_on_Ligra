@@ -150,13 +150,12 @@ void ensureUndirected(graph<vertex> &GA)
 }
 
 template <class vertex>
-void onePassColoring(graph<vertex> &GA,
-                     std::vector<std::vector<uintT>> &partition,
-                     std::vector<uintT> &colorData,
-                     uintT maxDegree)
+void makeColorPartition(graph<vertex> &GA,
+                        std::vector<std::vector<uintT>> &partition,
+                        std::vector<uintT> &colorData,
+                        uintT maxDegree)
 {
     const size_t numVertices = GA.n;
-    partition.resize(maxDegree);
     for(uintT v_i = 0; v_i < numVertices; v_i++)
     {
         // Get current vertex's neighbours
@@ -192,5 +191,4 @@ void onePassColoring(graph<vertex> &GA,
             newColor++;
         }
     }
-    partition.shrink_to_fit();
 }

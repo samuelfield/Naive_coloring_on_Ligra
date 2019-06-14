@@ -8,8 +8,7 @@ void Compute(graph<vertex> &GA, commandLine P)
     ensureUndirected(GA);
     
     const size_t numVertices = GA.n;
-    std::vector<uintT> colorData(numVertices, 0);
-    // Color* colorData = new Color[numVertices];    
+    std::vector<uintT> colorData(numVertices, 0); 
     const uintT maxDegree = getMaxDeg(GA);
 
     // Verbose variables
@@ -95,7 +94,6 @@ void Compute(graph<vertex> &GA, commandLine P)
                     for(uintT n_i = 0; n_i < vDegree; n_i++)
                     {
                         uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                        // if (neighColors[n_i] > newColor)
                         currentSchedule.schedule(neigh, false);
                     }
                 }
@@ -116,5 +114,4 @@ void Compute(graph<vertex> &GA, commandLine P)
 
     // Assess graph and cleanup
     assessGraph(GA, colorData, maxDegree);
-    // delete[] colorData;
 }

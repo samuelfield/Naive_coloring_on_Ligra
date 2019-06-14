@@ -29,11 +29,13 @@
 template <class vertex>
 void Compute(graph<vertex> &GA, commandLine P)
 {
+    timer fullTimer, iterTimer;
+    fullTimer.start();
+    
     // Check that graph is undirected (out degree == in degree for all vertices)
     ensureUndirected(GA);
     
     const size_t numVertices = GA.n;
-    // Color* colorData = new Color[numVertices];
     std::vector<uintT> colorData(numVertices, 0);
     const uintT maxDegree = getMaxDeg(GA);
 
@@ -41,14 +43,13 @@ void Compute(graph<vertex> &GA, commandLine P)
     bool verbose = true;
     uintT activeVertices;
     uintT activeEdges;
-    timer fullTimer, iterTimer;
 
     // Make new scheduler and schedule all vertices
     BitsetScheduler currentSchedule(numVertices);
     currentSchedule.reset();
     currentSchedule.scheduleAll();
 
-    fullTimer.start();
+
     double lastStopTime = iterTimer.getTime();
 
     // Loop over vertices until nothing is scheduled
@@ -118,7 +119,7 @@ void Compute(graph<vertex> &GA, commandLine P)
                 // Schedule all neighbours if required
                 if (scheduleNeighbors)
                 {
-                    parallel_for (uintT n_i = 0; n_i < vDegree; n_i++)
+                    for (uintT n_i = 0; n_i < vDegree; n_i++)
                     {
                         uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
                         currentSchedule.schedule(neigh, false);
@@ -141,5 +142,4 @@ void Compute(graph<vertex> &GA, commandLine P)
 
     // Assess graph and cleanup
     assessGraph(GA, colorData, maxDegree);
-    // delete[] colorData;
 }

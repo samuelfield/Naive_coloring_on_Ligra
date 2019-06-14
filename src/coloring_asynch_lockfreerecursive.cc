@@ -23,6 +23,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "coloring_base.h"
+#include <mutex>
 
 
 // Naive coloring implementation
@@ -50,17 +51,20 @@ void Compute(graph<vertex> &GA, commandLine P)
     currentSchedule.scheduleAll();
 
     // Make partition by coloring
-    std::vector<std::vector<uintT>> partition(maxDegree + 1);
+    std::vector<std::vector<uintT>> currentPartition(maxDegree + 1);
+    std::vector<std::vector<uintT>> nextPartition(maxDegree + 1);
+    std::mutex partMutex;
+
     uint64_t iter = 1;
     double lastStopTime = iterTimer.getTime();
-    
+
     if (verbose)
     {
         std::cout << std::endl;
         std::cout << "Iteration: " << iter << std::endl;
     }
 
-    makeColorPartition(GA, partition, colorData, maxDegree);
+    makeColorPartition(GA, currentPartition, colorData, maxDegree);
 
     std::cout << "\tActive Vs: " << numVertices << std::endl;
     std::cout << "\tActive Es: " << GA.m << std::endl;
@@ -88,13 +92,13 @@ void Compute(graph<vertex> &GA, commandLine P)
         currentSchedule.newIteration();
         activeVertices = currentSchedule.numTasks();
 
-        for (uintT p_i = 0; p_i < partition.size(); p_i++)
+        parallel_for (uintT p_i = 0; p_i < currentPartition.size(); p_i++)
         {
-            uintT numPartVerices = partition[p_i].size();
+            uintT numPartVerices = currentPartition[p_i].size();
             // Parallel loop where each vertex is assigned a color
-            parallel_for(uintT pv_i = 0; pv_i < numPartVerices; pv_i++)
+            for(uintT pv_i = 0; pv_i < numPartVerices; pv_i++)
             {
-                uintT v_i = partition[p_i][pv_i];
+                uintT v_i = currentPartition[p_i][pv_i];
                 if (currentSchedule.isScheduled(v_i))
                 {
                     // Get current vertex's neighbours
@@ -127,8 +131,12 @@ void Compute(graph<vertex> &GA, commandLine P)
                             if (currentColor != newColor)
                             {
                                 scheduleNeighbors = true;
+                                colorData[v_i] = newColor;
                             }
-                            colorData[v_i] = newColor;
+                            {
+                                std::lock_guard<std::mutex> puchBackLock(partMutex);
+                                nextPartition[newColor].push_back(v_i);
+                            }
                             break;
                         }
                         newColor++;
@@ -145,6 +153,11 @@ void Compute(graph<vertex> &GA, commandLine P)
                     }
                 }
             }
+        }
+        std::swap(currentPartition, nextPartition);
+        for (uintT p_i = 0; p_i < nextPartition.size(); p_i++)
+        {
+            nextPartition[p_i].clear();
         }
         if (verbose)
         {
