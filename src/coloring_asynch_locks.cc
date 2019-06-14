@@ -91,12 +91,12 @@ void Compute(graph<vertex> &GA, commandLine P)
                 // Get write lock on self and reader locks on all neighbours
                 while (!obtainLocks(GA, colorData, v_i)) {}
                 
-                for (uintT n_i = 0; n_i < vDegree; n_i++)
+                parallel_for (uintT n_i = 0; n_i < vDegree; n_i++)
                 {
                     uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
                     Color neighVal = colorData[neigh];
                     if (possibleColors[neighVal.color]) 
-                        possibleColors[neighVal.color] = false; // Probably race condition here without locks
+                        possibleColors[neighVal.color] = false;
                 }
 
                 // Find minimum color by iterating through color array in increasing order
