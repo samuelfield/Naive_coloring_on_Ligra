@@ -47,17 +47,26 @@ struct ReadersWriterLock
 
     bool BeginRead ()
     {
-        if(readers.try_lock())
+        readers.lock();
+        if (blockers == 0)
         {
-            blockers++;
-            if (blockers == 1)
-                writer.lock();
-            readers.unlock();
-            return true;
-        }        
+            if(writer.try_lock())
+            {
+                blockers++;
+                readers.unlock();
+                return true;
+            }   
+            else 
+            {
+                readers.unlock();
+                return false;
+            }
+        }
         else
         {
-            return false;
+            blockers++;
+            readers.unlock();
+            return true;
         }
     }
 
@@ -73,12 +82,10 @@ struct ReadersWriterLock
     void BeginWrite()
     {
         writer.lock();
-        readers.lock();
     }
 
     void EndWrite()
     {
-        readers.unlock();
         writer.unlock();
     }      
 };
@@ -169,12 +176,56 @@ struct Color
     }
 };
 
-Color* colorData;
+
+template <class vertex>
+void releaseLocks(graph<vertex> &GA, Color* &colorData, const uint v_i)
+{
+    const uintT vDegree = GA.V[v_i].getOutDegree();
+
+    colorData[v_i].rwLock.EndWrite();
+    for(uintT n_i = 0; n_i < vDegree; n_i++)
+    {
+        uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
+        colorData[neigh].rwLock.EndRead();
+    }
+}
+
+template <class vertex>
+bool obtainLocks(graph<vertex> &GA, Color* &colorData, const uint v_i)
+{
+    const uintT vDegree = GA.V[v_i].getOutDegree();
+    uintT neigh;
+
+    // Get write lock on self and reader locks on all neighbours
+    colorData[v_i].rwLock.BeginWrite();
+    for(uintT n_i = 0; n_i < vDegree; n_i++)
+    {
+        neigh = GA.V[v_i].getOutNeighbor(n_i);
+        while (!colorData[neigh].rwLock.BeginRead())
+        {
+            // Die if lower priority than neighbour
+            if (colorData[v_i].priority < colorData[neigh].priority)
+            {
+                // Release any locks that have been obtained
+                colorData[v_i].rwLock.EndWrite();
+                for(uintT rev_i = n_i; rev_i > 0; rev_i--)
+                {
+                    uintT rev_neigh = GA.V[v_i].getOutNeighbor(rev_i);
+                    colorData[rev_neigh].rwLock.EndRead();
+                }
+                return false;
+            }            
+        }
+    }
+
+    return true;
+}
+
 
 // Go through every vertex and check that it's color does not conflict with neighbours
 // while also checking that each vertex is minimally colored
 template <class vertex>
-void assessGraph(graph<vertex> &GA, uintT maxDegree) 
+void assessGraph(graph<vertex> &GA, Color* &colorData, uintT maxDegree) 
 {
     uintT numVertices = GA.n;
     uintT conflict = 0;
@@ -250,7 +301,7 @@ uintT getMaxDeg(const graph<vertex> &GA)
 
 //randomize vertex values
 template <class vertex>
-void randomizeColors(graph<vertex> &GA)
+void randomizeColors(graph<vertex> &GA, Color* &colorData)
 {
     const size_t numVertices = GA.n;
     std::random_device rd;

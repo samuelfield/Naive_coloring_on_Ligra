@@ -33,7 +33,7 @@ void Compute(graph<vertex> &GA, commandLine P)
     ensureUndirected(GA);
     
     const size_t numVertices = GA.n;
-    colorData = new Color[numVertices];
+    Color* colorData = new Color[numVertices];
     const uintT maxDegree = getMaxDeg(GA);
 
     // Verbose variables
@@ -89,23 +89,12 @@ void Compute(graph<vertex> &GA, commandLine P)
                 std::vector<bool> possibleColors(maxDegree + 1, true);
 
                 // Get write lock on self and reader locks on all neighbours
-                colorData[v_i].rwLock.BeginWrite();
-                for(uintT n_i = 0; n_i < vDegree; n_i++)
+                while (!obtainLocks(GA, colorData, v_i))
                 {
-                    while(!colorData[n_i].rwLock.BeginRead())
-                    {
-                        if (colorData[v_i].priority < colorData[n_i].priority)
-                        {
-                            colorData[v_i].rwLock.EndWrite();
-                            colorData[v_i].rwLock.BeginWrite();
-                        }
-
-                        // while(!colorData[n_i].rwLock.BeginRead()) {}
-
-                    }
+                    releaseLocks(GA, colorData, v_i);
                 }
                 
-                parallel_for (uintT n_i = 0; n_i < vDegree; n_i++)
+                for (uintT n_i = 0; n_i < vDegree; n_i++)
                 {
                     uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
                     Color neighVal = colorData[neigh];
@@ -132,11 +121,7 @@ void Compute(graph<vertex> &GA, commandLine P)
                 }
 
                 // Release locks
-                colorData[v_i].rwLock.EndWrite();
-                for(uintT n_i = 0; n_i < vDegree; n_i++)
-                {
-                    colorData[n_i].rwLock.EndRead();
-                }
+                releaseLocks(GA, colorData, v_i);
 
                 // Schedule all neighbours if required
                 if (scheduleNeighbors)
@@ -163,6 +148,6 @@ void Compute(graph<vertex> &GA, commandLine P)
     }
 
     // Assess graph and cleanup
-    assessGraph(GA, maxDegree);
+    assessGraph(GA, colorData, maxDegree);
     delete[] colorData;
 }

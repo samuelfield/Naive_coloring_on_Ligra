@@ -108,12 +108,10 @@ struct Color
     }
 };
 
-Color* colorData;
-
 // Go through every vertex and check that it's color does not conflict with neighbours
 // while also checking that each vertex is minimally colored
 template <class vertex>
-void assessGraph(graph<vertex> &GA, uintT maxDegree) 
+void assessGraph(graph<vertex> &GA, Color* &colorData, uintT maxDegree) 
 {
     uintT numVertices = GA.n;
     uintT conflict = 0;
@@ -189,7 +187,7 @@ uintT getMaxDeg(const graph<vertex> &GA)
 
 //randomize vertex values
 template <class vertex>
-void randomizeColors(graph<vertex> &GA)
+void randomizeColors(graph<vertex> &GA, Color* &colorData)
 {
     const size_t numVertices = GA.n;
     std::random_device rd;

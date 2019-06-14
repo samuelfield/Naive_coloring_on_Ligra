@@ -8,7 +8,7 @@ void Compute(graph<vertex> &GA, commandLine P)
     ensureUndirected(GA);
     
     const size_t numVertices = GA.n;
-    colorData = new Color[numVertices];    
+    Color* colorData = new Color[numVertices];    
     const uintT maxDegree = getMaxDeg(GA);
 
     // Verbose variables
@@ -114,6 +114,6 @@ void Compute(graph<vertex> &GA, commandLine P)
     }
 
     // Assess graph and cleanup
-    assessGraph(GA, maxDegree);
+    assessGraph(GA, colorData, maxDegree);
     delete[] colorData;
 }
