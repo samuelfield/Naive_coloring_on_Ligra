@@ -26,6 +26,7 @@
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
+#include <rwlock.hpp>
 #include "parallel.h"
 using namespace std;
 

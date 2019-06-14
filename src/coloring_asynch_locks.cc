@@ -31,7 +31,7 @@ void Compute(graph<vertex> &GA, commandLine P)
 {
     // Check that graph is undirected (out degree == in degree for all vertices)
     ensureUndirected(GA);
-    
+
     const size_t numVertices = GA.n;
     Color* colorData = new Color[numVertices];
     const uintT maxDegree = getMaxDeg(GA);
@@ -89,10 +89,7 @@ void Compute(graph<vertex> &GA, commandLine P)
                 std::vector<bool> possibleColors(maxDegree + 1, true);
 
                 // Get write lock on self and reader locks on all neighbours
-                while (!obtainLocks(GA, colorData, v_i))
-                {
-                    releaseLocks(GA, colorData, v_i);
-                }
+                while (!obtainLocks(GA, colorData, v_i)) {}
                 
                 for (uintT n_i = 0; n_i < vDegree; n_i++)
                 {

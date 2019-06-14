@@ -39,54 +39,54 @@ uintT vertexPriority;
 
 struct ReadersWriterLock
 {
-    std::mutex readers;
-    std::mutex writer;
+    std::mutex shared;
+    std::mutex exclusive;
     uintT blockers;
 
-    ReadersWriterLock() : readers(), writer(), blockers(0) {}
+    ReadersWriterLock() : shared(), exclusive(), blockers(0) {}
 
     bool BeginRead ()
     {
-        readers.lock();
+        shared.lock();
         if (blockers == 0)
         {
-            if(writer.try_lock())
+            if(exclusive.try_lock())
             {
                 blockers++;
-                readers.unlock();
+                shared.unlock();
                 return true;
             }   
             else 
             {
-                readers.unlock();
+                shared.unlock();
                 return false;
             }
         }
         else
         {
             blockers++;
-            readers.unlock();
+            shared.unlock();
             return true;
         }
     }
 
     void EndRead ()
     {
-        readers.lock();
+        shared.lock();
         blockers--;
         if (blockers == 0)
-            writer.unlock();
-        readers.unlock();
+            exclusive.unlock();
+        shared.unlock();
     }
 
     void BeginWrite()
     {
-        writer.lock();
+        exclusive.lock();
     }
 
     void EndWrite()
     {
-        writer.unlock();
+        exclusive.unlock();
     }      
 };
 
@@ -105,7 +105,7 @@ struct Color
         priority = vertexPriority;
         vertexPriority++;
     }
-    Color(const Color &rhs) : color(rhs.color), rwLock()
+    Color(const Color &rhs) : color(rhs.color)
     {
         priority = rhs.priority;
     }
@@ -181,11 +181,12 @@ template <class vertex>
 void releaseLocks(graph<vertex> &GA, Color* &colorData, const uint v_i)
 {
     const uintT vDegree = GA.V[v_i].getOutDegree();
+    uintT neigh;
 
     colorData[v_i].rwLock.EndWrite();
     for(uintT n_i = 0; n_i < vDegree; n_i++)
     {
-        uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
+        neigh = GA.V[v_i].getOutNeighbor(n_i);
         colorData[neigh].rwLock.EndRead();
     }
 }
@@ -197,24 +198,34 @@ bool obtainLocks(graph<vertex> &GA, Color* &colorData, const uint v_i)
     uintT neigh;
 
     // Get write lock on self and reader locks on all neighbours
+    // colorData[v_i].rwLock.writeLock();
     colorData[v_i].rwLock.BeginWrite();
     for(uintT n_i = 0; n_i < vDegree; n_i++)
     {
         neigh = GA.V[v_i].getOutNeighbor(n_i);
-        while (!colorData[neigh].rwLock.BeginRead())
+        while (true)
         {
-            // Die if lower priority than neighbour
-            if (colorData[v_i].priority < colorData[neigh].priority)
+            // int result = colorData[neigh].rwLock.tryReadLock();
+            bool result = colorData[neigh].rwLock.BeginRead();
+            if (result)
+                break;
+            else
             {
-                // Release any locks that have been obtained
-                colorData[v_i].rwLock.EndWrite();
-                for(uintT rev_i = n_i; rev_i > 0; rev_i--)
+                // Die if lower priority than neighbour
+                if (colorData[v_i].priority < colorData[neigh].priority)
                 {
-                    uintT rev_neigh = GA.V[v_i].getOutNeighbor(rev_i);
-                    colorData[rev_neigh].rwLock.EndRead();
+                    // Release any locks that have been obtained
+                    // colorData[v_i].rwLock.unlock();
+                    colorData[v_i].rwLock.EndWrite();
+                    for(uintT rev_i = n_i; rev_i >= 0 && rev_i <= n_i; rev_i--)
+                    {
+                        uintT rev_neigh = GA.V[v_i].getOutNeighbor(rev_i);
+                        // colorData[rev_neigh].rwLock.unlock();
+                        colorData[rev_neigh].rwLock.EndRead();
+                    }
+                    return false;
                 }
-                return false;
-            }            
+            }                      
         }
     }
 
