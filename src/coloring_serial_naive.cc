@@ -8,7 +8,8 @@ void Compute(graph<vertex> &GA, commandLine P)
     ensureUndirected(GA);
     
     const size_t numVertices = GA.n;
-    Color* colorData = new Color[numVertices];    
+    std::vector<uintT> colorData(numVertices, 0);
+    // Color* colorData = new Color[numVertices];    
     const uintT maxDegree = getMaxDeg(GA);
 
     // Verbose variables
@@ -65,13 +66,13 @@ void Compute(graph<vertex> &GA, commandLine P)
                 for (uintT n_i = 0; n_i < vDegree; n_i++)
                 {
                     uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                    uintT neighVal = colorData[neigh].color;
+                    uintT neighVal = colorData[neigh];
                     possibleColors[neighVal] = false;  
                 }
 
                 // Find minimum color by iterating through color array in increasing order
                 uintT newColor = 0;
-                uintT currentColor = colorData[v_i].color; 
+                uintT currentColor = colorData[v_i]; 
                 while (newColor <= vDegree)
                 {                    
                     // If color is available and it is not the vertex's current value then try to assign
@@ -79,7 +80,7 @@ void Compute(graph<vertex> &GA, commandLine P)
                     {
                         if (currentColor != newColor)
                         {
-                            colorData[v_i].color = newColor;
+                            colorData[v_i] = newColor;
                             scheduleNeighbors = true;
                         }
 
@@ -115,5 +116,5 @@ void Compute(graph<vertex> &GA, commandLine P)
 
     // Assess graph and cleanup
     assessGraph(GA, colorData, maxDegree);
-    delete[] colorData;
+    // delete[] colorData;
 }

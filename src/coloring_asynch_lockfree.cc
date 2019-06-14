@@ -33,7 +33,8 @@ void Compute(graph<vertex> &GA, commandLine P)
     ensureUndirected(GA);
     
     const size_t numVertices = GA.n;
-    Color* colorData = new Color[numVertices];
+    std::vector<uintT> colorData(numVertices, 0);
+    // Color* colorData = new Color[numVertices];
     const uintT maxDegree = getMaxDeg(GA);
 
     // Make partition by coloring
@@ -95,14 +96,14 @@ void Compute(graph<vertex> &GA, commandLine P)
                 for(uintT n_i = 0; n_i < vDegree; n_i++)
                 {
                     uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                    uintT neighVal = colorData[neigh].color; // Probably race condition here without locks   
+                    uintT neighVal = colorData[neigh]; // Probably race condition here without locks   
                     if (possibleColors[neighVal]) // Add check to avoid false sharing
                         possibleColors[neighVal] = false;      
                 }
 
                 // Find minimum color by iterating through color array in increasing order
                 uintT newColor = 0;
-                uintT currentColor = colorData[v_i].color; 
+                uintT currentColor = colorData[v_i]; 
                 while (newColor <= vMaxColor)
                 {                    
                     // If color is available and it is not the vertex's current value then try to assign
@@ -112,7 +113,7 @@ void Compute(graph<vertex> &GA, commandLine P)
                         {
                             scheduleNeighbors = true;
                         }
-                        colorData[v_i].color = newColor;
+                        colorData[v_i] = newColor;
                         break;
                     }
                     newColor++;
@@ -144,5 +145,5 @@ void Compute(graph<vertex> &GA, commandLine P)
 
     // Assess graph and cleanup
     assessGraph(GA, colorData, maxDegree);
-    delete[] colorData;
+    // delete[] colorData;
 }

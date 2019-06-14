@@ -35,85 +35,19 @@
 
 #define TIME_PRECISION 3
 
-struct Color
-{
-    uintT color;
-
-    Color() : color(0) {}
-    Color(uint64_t val) : color(val){}
-    Color(const Color &rhs) : color(rhs.color){}
-
-    // prefix
-    inline Color& operator++()
-    {
-        this->color++;
-        return *this;
-    }
-
-    // postfix
-    inline Color operator++(int)
-    {
-        Color tmp(*this);
-        operator++();
-        return tmp;
-    }
-
-    inline bool operator==(const Color &rhs)
-    {
-        if (color == rhs.color)
-            return true;
-        else
-            return false;
-    }
-    inline bool operator!=(const Color &rhs)
-    {
-        if (color != rhs.color) 
-            return true;
-        else
-            return false;
-    }
-    inline bool operator<(const Color &rhs)
-    {
-        if (color < rhs.color)
-            return true;
-        else
-            return false;
-    }
-    inline bool operator<=(const Color &rhs)
-    {
-        if (color <= rhs.color)
-            return true;
-        else
-            return false;
-    }
-    inline bool operator>(const Color &rhs)
-    {
-        if (color > rhs.color)
-            return true;
-        else
-            return false;
-    }
-    inline bool operator>=(const Color &rhs)
-    {
-        if (color >= rhs.color)
-            return true;
-        else
-            return false;
-    }
-};
 
 // Go through every vertex and check that it's color does not conflict with neighbours
 // while also checking that each vertex is minimally colored
 template <class vertex>
-void assessGraph(graph<vertex> &GA, Color* &colorData, uintT maxDegree) 
+void assessGraph(const graph<vertex> &GA, const std::vector<uintT> &colorData, const uintT maxDegree) 
 {
-    uintT numVertices = GA.n;
+    const uintT numVertices = GA.n;
     uintT conflict = 0;
     uintT notMinimal = 0;
 
     parallel_for(uintT v_i = 0; v_i < numVertices; v_i++)
     {
-        Color vValue = colorData[v_i];  
+        uintT vValue = colorData[v_i];  
         uintT vDegree = GA.V[v_i].getOutDegree();
         std::vector<bool> possibleColors(maxDegree + 1, true);
 
@@ -122,8 +56,8 @@ void assessGraph(graph<vertex> &GA, Color* &colorData, uintT maxDegree)
         for(uintT n_i = 0; n_i < vDegree; n_i++)
         {
             uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-            Color neighVal = colorData[neigh];
-            possibleColors[neighVal.color] = false;
+            uintT neighVal = colorData[neigh];
+            possibleColors[neighVal] = false;
             
             if (neighVal == vValue)
             {
@@ -134,8 +68,8 @@ void assessGraph(graph<vertex> &GA, Color* &colorData, uintT maxDegree)
             conflict++;
 
         // Check for minimality
-        Color minimalColor = 0;
-        while (!possibleColors[minimalColor.color] && (minimalColor < vDegree + 1))
+        uintT minimalColor = 0;
+        while (!possibleColors[minimalColor] && (minimalColor < vDegree + 1))
         {
             minimalColor++;
         }
@@ -181,7 +115,7 @@ uintT getMaxDeg(const graph<vertex> &GA)
 
 //randomize vertex values
 template <class vertex>
-void randomizeColors(graph<vertex> &GA, Color* &colorData)
+void randomizeColors(graph<vertex> &GA, std::vector<uintT> &colorData)
 {
     const size_t numVertices = GA.n;
     std::random_device rd;
@@ -218,7 +152,7 @@ void ensureUndirected(graph<vertex> &GA)
 template <class vertex>
 void onePassColoring(graph<vertex> &GA,
                      std::vector<std::vector<uintT>> &partition,
-                     Color* &colorData,
+                     std::vector<uintT> &colorData,
                      uintT maxDegree)
 {
     const size_t numVertices = GA.n;
@@ -235,8 +169,8 @@ void onePassColoring(graph<vertex> &GA,
         for (uintT n_i = 0; n_i < vDegree; n_i++)
         {
             uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-            Color neighVal = colorData[neigh];
-            possibleColors[neighVal.color] = false;  
+            uintT neighVal = colorData[neigh];
+            possibleColors[neighVal] = false;  
         }
 
         // Find minimum color by iterating through color array in increasing order
@@ -249,7 +183,7 @@ void onePassColoring(graph<vertex> &GA,
             {
                 if (currentColor != newColor)
                 {
-                    colorData[v_i].color = newColor;
+                    colorData[v_i] = newColor;
                     partition[newColor].push_back(v_i);
                 }
 
