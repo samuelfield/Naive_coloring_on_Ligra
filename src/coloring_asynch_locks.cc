@@ -38,6 +38,10 @@ void Compute(graph<vertex> &GA, commandLine P)
     const size_t numVertices = GA.n;
     Color* colorData = new Color[numVertices];
     const uintT maxDegree = setDegrees(GA, colorData);
+    for (uintT i = 0; i < numVertices; i++)
+    {
+        colorData[i].color = maxDegree + 1;
+    }
 
     // Verbose variables
     bool verbose = true;
