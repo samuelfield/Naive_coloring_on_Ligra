@@ -57,4 +57,4 @@ color_serial.app: $(SRC_DIR)/coloring_serial_naive.cc
 
 
 clean: $(ALL)
-	rm -f $(OBJ_DIR)/*.o color_l.app color_n.app color_serial.app color_lf.app
+	rm -f $(OBJ_DIR)/*.o color_l.app color_n.app color_serial.app color_lf.app color_lfr.app

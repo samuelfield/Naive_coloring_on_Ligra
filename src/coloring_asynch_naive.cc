@@ -43,6 +43,7 @@ void Compute(graph<vertex> &GA, commandLine P)
     bool verbose = true;
     uintT activeVertices;
     uintT activeEdges;
+    uintT maxColor = 0;
 
     // Make new scheduler and schedule all vertices
     BitsetScheduler currentSchedule(numVertices);
@@ -108,9 +109,11 @@ void Compute(graph<vertex> &GA, commandLine P)
                     {
                         if (currentColor != newColor)
                         {
+                            colorData[v_i] = newColor;
                             scheduleNeighbors = true;
+                            if (newColor > maxColor)
+                                maxColor = newColor;
                         }
-                        colorData[v_i] = newColor;
                         break;
                     }
                     newColor++;
@@ -131,8 +134,10 @@ void Compute(graph<vertex> &GA, commandLine P)
         {
             std::cout << "\tActive Vs: " << activeVertices << std::endl;
             std::cout << "\tActive Es: " << activeEdges << std::endl;
+            std::cout << "\tMax Color: " << maxColor << std::endl;
             std::cout << "\tTime: " << setprecision(TIME_PRECISION) << iterTimer.getTime() - lastStopTime << std::endl;
             lastStopTime = iterTimer.getTime();
+            maxColor = 0;
         }
     }
     if (verbose)

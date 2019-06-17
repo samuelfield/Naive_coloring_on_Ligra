@@ -29,6 +29,9 @@
 template <class vertex>
 void Compute(graph<vertex> &GA, commandLine P)
 {
+    timer fullTimer, iterTimer;
+    fullTimer.start();
+
     // Check that graph is undirected (out degree == in degree for all vertices)
     ensureUndirected(GA);
 
@@ -40,14 +43,13 @@ void Compute(graph<vertex> &GA, commandLine P)
     bool verbose = true;
     uintT activeVertices;
     uintT activeEdges;
-    timer fullTimer, iterTimer;
+    uintT maxColor = 0;
 
     // Make new scheduler and schedule all vertices
     BitsetScheduler currentSchedule(numVertices);
     currentSchedule.reset();
     currentSchedule.scheduleAll();
 
-    fullTimer.start();
     double lastStopTime = iterTimer.getTime();
     
     // Loop over vertices until nothing is scheduled
@@ -103,6 +105,8 @@ void Compute(graph<vertex> &GA, commandLine P)
                         {
                             colorData[v_i].color = newColor;
                             scheduleNeighbors = true;
+                            if (newColor > maxColor)
+                                maxColor = newColor;
                         }
                         break;
                     }
@@ -127,8 +131,10 @@ void Compute(graph<vertex> &GA, commandLine P)
         {
             std::cout << "\tActive Vs: " << activeVertices << std::endl;
             std::cout << "\tActive Es: " << activeEdges << std::endl;
+            std::cout << "\tMax Color: " << maxColor << std::endl;
             std::cout << "\tTime: " << setprecision(TIME_PRECISION) << iterTimer.getTime() - lastStopTime << std::endl;
             lastStopTime = iterTimer.getTime();
+            maxColor = 0;
         }
     }
     if (verbose)

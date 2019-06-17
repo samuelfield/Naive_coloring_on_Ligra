@@ -44,12 +44,15 @@ void assessGraph(const graph<vertex> &GA, const std::vector<uintT> &colorData, c
     const uintT numVertices = GA.n;
     uintT conflict = 0;
     uintT notMinimal = 0;
+    uintT maxColor = 0;
 
     parallel_for(uintT v_i = 0; v_i < numVertices; v_i++)
     {
         uintT vValue = colorData[v_i];  
         uintT vDegree = GA.V[v_i].getOutDegree();
         std::vector<bool> possibleColors(maxDegree + 1, true);
+        if (vValue > maxColor)
+            maxColor = vValue;
 
         // Check for conflict and set possible colors
         bool neighConflict = false;
@@ -91,6 +94,7 @@ void assessGraph(const graph<vertex> &GA, const std::vector<uintT> &colorData, c
     if (conflict == 0 && notMinimal == 0)
     {
         std::cout << "Successful Coloring!" << std::endl;
+        std::cout << "Max Color: " << maxColor <<  "\tMax Degree: " << maxDegree << std::endl;
     }
 }
 
@@ -150,11 +154,12 @@ void ensureUndirected(graph<vertex> &GA)
 }
 
 template <class vertex>
-void makeColorPartition(graph<vertex> &GA,
+uintT makeColorPartition(graph<vertex> &GA,
                         std::vector<std::vector<uintT>> &partition,
                         std::vector<uintT> &colorData,
                         uintT maxDegree)
 {
+    uintT maxColor = 0;
     const size_t numVertices = GA.n;
     for(uintT v_i = 0; v_i < numVertices; v_i++)
     {
@@ -184,11 +189,14 @@ void makeColorPartition(graph<vertex> &GA,
                 {
                     colorData[v_i] = newColor;
                     partition[newColor].push_back(v_i);
+                    if (newColor > maxColor)
+                        maxColor = newColor;
                 }
-
                 break;
             }
             newColor++;
         }
     }
+
+    return maxColor;
 }
