@@ -38,7 +38,7 @@ void Compute(graph<vertex> &GA, commandLine P)
     
     const size_t numVertices = GA.n;
     const uintT maxDegree = getMaxDeg(GA);
-    std::vector<uintT> colorData(numVertices, maxDegree + 1);
+    std::vector<uintT> colorData(numVertices, maxDegree);
 
     // Verbose variables
     bool verbose = true;

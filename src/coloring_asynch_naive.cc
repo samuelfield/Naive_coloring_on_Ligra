@@ -37,13 +37,13 @@ void Compute(graph<vertex> &GA, commandLine P)
     
     const size_t numVertices = GA.n;
     const uintT maxDegree = getMaxDeg(GA);
-    std::vector<uintT> colorData(numVertices, maxDegree + 1);
+    std::vector<uintT> colorData(numVertices, maxDegree);
 
     // Verbose variables
     bool verbose = true;
     uintT activeVertices;
     uintT activeEdges;
-    uintT maxColor = 0;
+    uintT changedVertices;
 
     // Make new scheduler and schedule all vertices
     BitsetScheduler currentSchedule(numVertices);
@@ -70,6 +70,7 @@ void Compute(graph<vertex> &GA, commandLine P)
         }
         activeVertices = 0;
         activeEdges = 0;
+        changedVertices = 0;
 
         currentSchedule.newIteration();
         activeVertices = currentSchedule.numTasks();
@@ -110,8 +111,7 @@ void Compute(graph<vertex> &GA, commandLine P)
                         {
                             colorData[v_i] = newColor;
                             scheduleNeighbors = true;
-                            if (newColor > maxColor)
-                                maxColor = newColor;
+                            changedVertices++;
                         }
                         break;
                     }
@@ -133,10 +133,9 @@ void Compute(graph<vertex> &GA, commandLine P)
         {
             std::cout << "\tActive Vs: " << activeVertices << std::endl;
             std::cout << "\tActive Es: " << activeEdges << std::endl;
-            std::cout << "\tMax Color: " << maxColor << std::endl;
+            std::cout << "\tModified Vs: " << changedVertices << std::endl;
             std::cout << "\tTime: " << setprecision(TIME_PRECISION) << iterTimer.getTime() - lastStopTime << std::endl;
             lastStopTime = iterTimer.getTime();
-            maxColor = 0;
         }
     }
     if (verbose)

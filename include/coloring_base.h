@@ -159,7 +159,7 @@ uintT makeColorPartition(graph<vertex> &GA,
                         std::vector<uintT> &colorData,
                         uintT maxDegree)
 {
-    uintT maxColor = 0;
+    uintT changedVertices = 0;
     const size_t numVertices = GA.n;
     for(uintT v_i = 0; v_i < numVertices; v_i++)
     {
@@ -189,8 +189,7 @@ uintT makeColorPartition(graph<vertex> &GA,
                 {
                     colorData[v_i] = newColor;
                     partition[newColor].push_back(v_i);
-                    if (newColor > maxColor)
-                        maxColor = newColor;
+                    changedVertices++;
                 }
                 break;
             }
@@ -198,5 +197,5 @@ uintT makeColorPartition(graph<vertex> &GA,
         }
     }
 
-    return maxColor;
+    return changedVertices;
 }

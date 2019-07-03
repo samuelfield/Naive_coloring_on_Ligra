@@ -29,15 +29,18 @@
 template <class vertex>
 void Compute(graph<vertex> &GA, commandLine P)
 {
+    uintT maxAllowableColor = 200;
     timer fullTimer, iterTimer;
     fullTimer.start();
-
+    
     // Check that graph is undirected (out degree == in degree for all vertices)
     ensureUndirected(GA);
     
     const size_t numVertices = GA.n;
     const uintT maxDegree = getMaxDeg(GA);
+
     std::vector<uintT> colorData(numVertices, maxDegree);
+    std::vector<std::vector<uintT>> neighborColors(numVertices, std::vector<uintT>(maxAllowableColor));
 
     // Verbose variables
     bool verbose = true;
@@ -50,26 +53,10 @@ void Compute(graph<vertex> &GA, commandLine P)
     currentSchedule.reset();
     currentSchedule.scheduleAll();
 
-    // Make partition by coloring
-    std::vector<std::vector<uintT>> partition(maxDegree + 1);
-    uint64_t iter = 1;
     double lastStopTime = iterTimer.getTime();
-    
-    if (verbose)
-    {
-        std::cout << std::endl;
-        std::cout << "Iteration: " << iter << std::endl;
-    }
-
-    changedVertices = makeColorPartition(GA, partition, colorData, maxDegree);
-
-    std::cout << "\tActive Vs: " << numVertices << std::endl;
-    std::cout << "\tActive Es: " << GA.m << std::endl;
-    std::cout << "\tModified Vs: " << changedVertices << std::endl;
-    std::cout << "\tTime: " << setprecision(TIME_PRECISION) << iterTimer.getTime() - lastStopTime << std::endl;
-    lastStopTime = iterTimer.getTime();
 
     // Loop over vertices until nothing is scheduled
+    uint64_t iter = 0;
     while (true)
     {
         iter++;
@@ -91,61 +78,47 @@ void Compute(graph<vertex> &GA, commandLine P)
         currentSchedule.newIteration();
         activeVertices = currentSchedule.numTasks();
 
-        for (uintT p_i = 0; p_i < partition.size(); p_i++)
+        // Parallel loop where each vertex is assigned a color
+        parallel_for(uintT v_i = 0; v_i < numVertices; v_i++)
         {
-            uintT numPartVerices = partition[p_i].size();
-            // Parallel loop where each vertex is assigned a color
-            parallel_for(uintT pv_i = 0; pv_i < numPartVerices; pv_i++)
+            if (currentSchedule.isScheduled(v_i))
             {
-                uintT v_i = partition[p_i][pv_i];
-                if (currentSchedule.isScheduled(v_i))
-                {
-                    // Get current vertex's neighbours
-                    const uintT vDegree = GA.V[v_i].getOutDegree();
-                    const uintT vMaxColor = vDegree + 1;
-                    bool scheduleNeighbors = false;
-                    
-                    activeEdges += vDegree;
+                // Get current vertex's neighbours
+                const uintT vDegree = GA.V[v_i].getOutDegree();
+                const uintT vMaxColor = vDegree + 1;
+                bool scheduleNeighbors = false;
+                
+                activeEdges += vDegree;
+                
+                // Find minimum color by iterating through color array in increasing order
+                uintT newColor = 0;
+                uintT oldColor = colorData[v_i]; 
+                while (newColor <= vMaxColor)
+                {                    
+                    // If color is available and it is not the vertex's current value then try to assign
+                    if (neighborColors[v_i][newColor] == 0)
+                    {
+                        if (oldColor != newColor)
+                        {
+                            colorData[v_i] = newColor;
+                            scheduleNeighbors = true;
+                            changedVertices++;
+                        }
+                        break;
+                    }
+                    newColor++;
+                }
 
-                    // Make bool array for possible color values and then set any color
-                    // already taken by neighbours to false
-                    std::vector<bool> possibleColors(maxDegree + 1, true);
-                    
+                // Schedule all neighbours if required
+                if (scheduleNeighbors)
+                {
                     for (uintT n_i = 0; n_i < vDegree; n_i++)
                     {
                         uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                        uintT neighVal = colorData[neigh]; // Probably race condition here without locks   
-                        if (possibleColors[neighVal]) // Add check to avoid false sharing
-                            possibleColors[neighVal] = false;      
-                    }
-
-                    // Find minimum color by iterating through color array in increasing order
-                    uintT newColor = 0;
-                    uintT currentColor = colorData[v_i]; 
-                    while (newColor <= vMaxColor)
-                    {                    
-                        // If color is available and it is not the vertex's current value then try to assign
-                        if (possibleColors[newColor])
-                        {
-                            if (currentColor != newColor)
-                            {
-                                colorData[v_i] = newColor;
-                                scheduleNeighbors = true;
-                                changedVertices++;
-                            }
-                            break;
-                        }                        
-                        newColor++;
-                    }
-
-                    // Schedule all neighbours if required
-                    if (scheduleNeighbors)
-                    {
-                        for (uintT n_i = 0; n_i < vDegree; n_i++)
-                        {
-                            uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
+                        --neighborColors[neigh][oldColor];
+                        ++neighborColors[neigh][newColor];
+                        if (neighborColors[neigh][oldColor] == 0)
                             currentSchedule.schedule(neigh, false);
-                        }
                     }
                 }
             }
