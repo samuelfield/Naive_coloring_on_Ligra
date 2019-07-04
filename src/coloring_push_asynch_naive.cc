@@ -94,12 +94,13 @@ void Compute(graph<vertex> &GA, commandLine P)
                 const uintT vDegree = GA.V[v_i].getOutDegree();
                 activeEdges += vDegree;
                 
-                // Find minimum color by checking potential color and taking it if it is less
-                if (potentialColor[v_i] < currentColor[v_i])
+                uintT oldColor = currentColor[v_i];
+                uintT newColor = potentialColor[v_i];
+
+                // Find minimum color by checking potential color and taking the lesser
+                if (newColor < currentColor[v_i])
                 {
-                    uintT oldColor = currentColor[v_i];
-                    uintT newColor = potentialColor[v_i];
-                    currentColor[v_i] = potentialColor[v_i];
+                    currentColor[v_i] = newColor; 
                     changedVertices++;
    
                     // Update with neighbours
@@ -109,10 +110,7 @@ void Compute(graph<vertex> &GA, commandLine P)
                         --neighborColors[neigh][oldColor];
                         ++neighborColors[neigh][newColor];
 
-                        if (neighborColors[neigh][oldColor] == 0)
-                        {
-                            currentSchedule.schedule(neigh, false);
-                        }
+                        currentSchedule.schedule(neigh, false);
 
                         // If change to current node opened up better color for neighbour, neighbour takes it
                         if (neighborColors[neigh][oldColor] == 0 && oldColor < potentialColor[neigh])
@@ -133,6 +131,7 @@ void Compute(graph<vertex> &GA, commandLine P)
                 }
             }
         }
+
         if (verbose)
         {
             std::cout << "\tActive Vs: " << activeVertices << std::endl;
@@ -147,6 +146,6 @@ void Compute(graph<vertex> &GA, commandLine P)
         cout << "\nTotal Time : " << setprecision(TIME_PRECISION) << fullTimer.stop() << "\n";
     }
 
-    // Assess graph and cleanup
+    // Assess graph
     assessGraph(GA, currentColor, maxDegree);
 }
