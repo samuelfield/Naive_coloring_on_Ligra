@@ -98,7 +98,9 @@ void Compute(graph<vertex> &GA, commandLine P)
                 std::vector<bool> possibleColors(maxDegree + 1, true);
 
                 // Get colors (need write lock on self and reader locks on all neighbours)
-                while (!GetPossibleColors(GA, colorData, possibleColors, v_i)) {}
+                // while (!GetPossibleColors(GA, colorData, possibleColors, v_i)) {}
+                while (!GetPossibleColors_RC(GA, colorData, possibleColors, v_i)) {}
+
                 
                 // Find minimum color by iterating through color array in increasing order
                 while (newColor <= vMaxColor)
@@ -118,7 +120,8 @@ void Compute(graph<vertex> &GA, commandLine P)
                 }
 
                 // Release locks
-                releaseLocks(GA, colorData, v_i);
+                // releaseLocks(GA, colorData, v_i);
+                releaseLocks_RC(GA, colorData, v_i);
 
                 // Schedule all neighbours if required
                 if (scheduleNeighbors)

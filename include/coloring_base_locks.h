@@ -197,6 +197,12 @@ void releaseLocks(graph<vertex> &GA, Color* &colorData, const uint v_i)
 }
 
 template <class vertex>
+void releaseLocks_RC(graph<vertex> &GA, Color* &colorData, const uint v_i)
+{
+    colorData[v_i].rwLock.unlock();
+}
+
+template <class vertex>
 bool GetPossibleColors( const graph<vertex> &GA,
                         Color* &colorData,
                         std::vector<bool> &possibleColors,
@@ -243,6 +249,60 @@ bool GetPossibleColors( const graph<vertex> &GA,
 
         uintT neighVal = colorData[neigh].color;
         possibleColors[neighVal] = false;  
+    }
+
+    return true;
+}
+
+
+template <class vertex>
+bool GetPossibleColors_RC( const graph<vertex> &GA,
+                        Color* &colorData,
+                        std::vector<bool> &possibleColors,
+                        const uint v_i)
+{
+    const uintT vDegree = GA.V[v_i].getOutDegree();
+    uintT neigh;
+    int result;
+
+    // Get write lock on self and reader locks on all neighbours
+    colorData[v_i].rwLock.writeLock();
+    for(uintT n_i = 0; n_i < vDegree; n_i++)
+    {
+        neigh = GA.V[v_i].getOutNeighbor(n_i);
+        while ((result = colorData[neigh].rwLock.tryReadLock()) != 0)
+        {
+            if (result == EBUSY)
+            {
+                // Die if lower priority than neighbour
+                // if (colorData[v_i].priority < colorData[neigh].priority)
+                if (colorData[v_i].degree < colorData[neigh].degree || 
+                    (colorData[v_i].degree == colorData[neigh].degree &&
+                    colorData[v_i].priority < colorData[neigh].priority))
+                {
+                    // Release any locks that have been obtained
+                    colorData[v_i].rwLock.unlock();
+
+                    // Release locks from 1 before the conflict to beginning
+                    for(uintT rev_i = n_i - 1; rev_i >= 0 && rev_i <= n_i; rev_i--)
+                    {
+                        // cout << v_i << ": " << rev_i << endl;
+                        uintT rev_neigh = GA.V[v_i].getOutNeighbor(rev_i);
+                        colorData[rev_neigh].rwLock.unlock();
+                    }
+                    return false;
+                }
+            }    
+            else
+            {
+                cout << "Locking Error: " << result << endl;
+                exit(0);
+            }                  
+        }
+
+        uintT neighVal = colorData[neigh].color;
+        possibleColors[neighVal] = false;
+        colorData[neigh].rwLock.unlock();
     }
 
     return true;
