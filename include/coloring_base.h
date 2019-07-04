@@ -46,7 +46,7 @@ void assessGraph(const graph<vertex> &GA, const std::vector<uintT> &colorData, c
     uintT notMinimal = 0;
     uintT maxColor = 0;
 
-    parallel_for(uintT v_i = 0; v_i < numVertices; v_i++)
+    parallel_for (uintT v_i = 0; v_i < numVertices; v_i++)
     {
         uintT vValue = colorData[v_i];  
         uintT vDegree = GA.V[v_i].getOutDegree();
@@ -179,18 +179,14 @@ uintT makeColorPartition(graph<vertex> &GA,
 
         // Find minimum color by iterating through color array in increasing order
         uintT newColor = 0;
-        uintT currentColor = colorData[v_i]; 
         while (newColor <= vDegree)
         {                    
             // If color is available and it is not the vertex's current value then try to assign
             if (possibleColors[newColor])
             {
-                if (currentColor != newColor)
-                {
-                    colorData[v_i] = newColor;
-                    partition[newColor].push_back(v_i);
-                    changedVertices++;
-                }
+                colorData[v_i] = newColor;
+                partition[newColor].push_back(v_i);
+                changedVertices++;
                 break;
             }
             newColor++;

@@ -13,6 +13,7 @@ void Compute(graph<vertex> &GA, commandLine P)
     const size_t numVertices = GA.n;
     const uintT maxDegree = getMaxDeg(GA);
     std::vector<uintT> colorData(numVertices, maxDegree); 
+    randomizeColors(GA, colorData);
 
     // Verbose variables
     bool verbose = true;
@@ -51,7 +52,7 @@ void Compute(graph<vertex> &GA, commandLine P)
         activeVertices = currentSchedule.numTasks();
 
         // Parallel loop where each vertex is assigned a color
-        for(uintT v_i = 0; v_i < numVertices; v_i++)
+        for (uintT v_i = 0; v_i < numVertices; v_i++)
         {
             if (currentSchedule.isScheduled(v_i))
             {
@@ -98,7 +99,8 @@ void Compute(graph<vertex> &GA, commandLine P)
                     for(uintT n_i = 0; n_i < vDegree; n_i++)
                     {
                         uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                        currentSchedule.schedule(neigh, false);
+                        if (currentColor < colorData[neigh])
+                            currentSchedule.schedule(neigh, false);
                     }
                 }
             }

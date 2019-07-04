@@ -40,33 +40,25 @@ void Compute(graph<vertex> &GA, commandLine P)
     const size_t numVertices = GA.n;
     const uintT maxDegree = getMaxDeg(GA);
 
-    const uintT initialColor = 500;
-    std::vector<uintT> colorData(numVertices, initialColor);
-    std::vector<std::vector<uintT>> neighborColors(numVertices, std::vector<uintT>(initialColor));
+    const uintT maxColor = 500;
+    std::vector<uintT> colorData(numVertices, 0);
+    std::vector<std::vector<uintT>> neighborColors(numVertices, std::vector<uintT>(maxColor));
     
-    // Initialize neighbourColors so that each vertex has [initialColor] = # of neighbours
+    // Initialize neighbourColors so that each vertex has [maxColor] = # of neighbours
     for (uintT v_i = 0; v_i < numVertices; v_i++)
     {
-        neighborColors[v_i][initialColor] =  GA.V[v_i].getOutDegree();
+        neighborColors[v_i][0] =  GA.V[v_i].getOutDegree();
     }
-
-    // Make new scheduler and schedule all vertices
-    BitsetScheduler currentSchedule(numVertices);
-    currentSchedule.reset();
-    currentSchedule.scheduleAll();
 
     double lastStopTime = iterTimer.getTime();
 
     // Loop over vertices until nothing is scheduled
     uint64_t iter = 0;
-    while (true)
+    bool modifications = true;
+    while (modifications == true)
     {
+        modifications = false;
         iter++;
-        // Check if schedule is empty and break out of loop if it is
-        if (currentSchedule.anyScheduledTasks() == false)
-        {
-            break;
-        }
 
         if (verbose)
         {
@@ -77,63 +69,56 @@ void Compute(graph<vertex> &GA, commandLine P)
         uintT activeEdges = 0;
         uintT changedVertices = 0;
 
-        currentSchedule.newIteration();
-        activeVertices = currentSchedule.numTasks();
-
         // Parallel loop where each vertex is assigned a color
         parallel_for (uintT v_i = 0; v_i < numVertices; v_i++)
         {
-            if (currentSchedule.isScheduled(v_i))
-            {
-                // Get current vertex's neighbours
-                const uintT vDegree = GA.V[v_i].getOutDegree();
-                const uintT vMaxColor = vDegree + 1;
-                bool scheduleNeighbors = false;
-                
-                activeEdges += vDegree;
+            // Get current vertex's neighbours
+            const uintT vDegree = GA.V[v_i].getOutDegree();
+            const uintT vMaxColor = vDegree + 1;
+            bool scheduleNeighbors = false;
+            
+            activeEdges += vDegree;
 
-                // Find minimum color by iterating through color array in increasing order
-                uintT newColor = 0;
-                uintT oldColor = colorData[v_i]; 
-                while (newColor <= vMaxColor)
-                {                    
-                    // If color is available and it is not the vertex's current value then try to assign
-                    if (neighborColors[v_i][newColor] == 0)
-                    {
-                        if (oldColor != newColor)
-                        {
-                            colorData[v_i] = newColor;
-                            scheduleNeighbors = true;
-                            changedVertices++;
-                        }
-                        break;
-                    }
-                    newColor++;
-                }
-
-                // Schedule all neighbours if required
-                if (scheduleNeighbors)
+            // Find minimum color by iterating through color array in increasing order
+            uintT newColor = 0;
+            uintT oldColor = colorData[v_i]; 
+            while (newColor <= vMaxColor)
+            {                    
+                // If color is available and it is not the vertex's current value then try to assign
+                if (neighborColors[v_i][newColor] == 0)
                 {
-                    for (uintT n_i = 0; n_i < vDegree; n_i++)
+                    if (oldColor != newColor)
                     {
-                        uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                        uintT oldCount;
-                        uintT newCount;
-
-                        do
-                        {
-                            oldCount = neighborColors[neigh][oldColor];
-                            newCount = oldCount - 1;
-                        } while (!CAS(&neighborColors[neigh][oldColor], oldCount, newCount));
-                        
-                        do
-                        {
-                            oldCount = neighborColors[neigh][newColor];
-                            newCount = oldCount + 1;
-                        } while (!CAS(&neighborColors[neigh][newColor], oldCount, newCount));
-
-                        currentSchedule.schedule(neigh, false);
+                        colorData[v_i] = newColor;
+                        scheduleNeighbors = true;
+                        changedVertices++;
+                        modifications = true;
                     }
+                    break;
+                }
+                newColor++;
+            }
+
+            // Schedule all neighbours if required
+            if (scheduleNeighbors)
+            {
+                for (uintT n_i = 0; n_i < vDegree; n_i++)
+                {
+                    uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
+                    uintT oldCount;
+                    uintT newCount;
+
+                    do
+                    {
+                        oldCount = neighborColors[neigh][oldColor];
+                        newCount = oldCount - 1;
+                    } while (!CAS(&neighborColors[neigh][oldColor], oldCount, newCount));
+                    
+                    do
+                    {
+                        oldCount = neighborColors[neigh][newColor];
+                        newCount = oldCount + 1;
+                    } while (!CAS(&neighborColors[neigh][newColor], oldCount, newCount));
                 }
             }
         }

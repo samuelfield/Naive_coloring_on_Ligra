@@ -38,6 +38,7 @@ void Compute(graph<vertex> &GA, commandLine P)
     const size_t numVertices = GA.n;
     const uintT maxDegree = getMaxDeg(GA);
     std::vector<uintT> colorData(numVertices, maxDegree);
+    // randomizeColors(GA, colorData);
 
     // Verbose variables
     bool verbose = true;
@@ -114,20 +115,19 @@ void Compute(graph<vertex> &GA, commandLine P)
                     for (uintT n_i = 0; n_i < vDegree; n_i++)
                     {
                         uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                        uintT neighVal = colorData[neigh]; // Probably race condition here without locks   
-                        if (possibleColors[neighVal]) // Add check to avoid false sharing
-                            possibleColors[neighVal] = false;      
+                        uintT neighVal = colorData[neigh];
+                        possibleColors[neighVal] = false;      
                     }
 
                     // Find minimum color by iterating through color array in increasing order
                     uintT newColor = 0;
-                    uintT currentColor = colorData[v_i]; 
+                    uintT oldColor = colorData[v_i]; 
                     while (newColor <= vMaxColor)
                     {                    
                         // If color is available and it is not the vertex's current value then try to assign
                         if (possibleColors[newColor])
                         {
-                            if (currentColor != newColor)
+                            if (newColor != oldColor)
                             {
                                 colorData[v_i] = newColor;
                                 scheduleNeighbors = true;
@@ -144,7 +144,8 @@ void Compute(graph<vertex> &GA, commandLine P)
                         for (uintT n_i = 0; n_i < vDegree; n_i++)
                         {
                             uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                            currentSchedule.schedule(neigh, false);
+                            if (oldColor < colorData[neigh])
+                                currentSchedule.schedule(neigh, false);
                         }
                     }
                 }

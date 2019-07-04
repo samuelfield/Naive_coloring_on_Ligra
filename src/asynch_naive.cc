@@ -38,6 +38,7 @@ void Compute(graph<vertex> &GA, commandLine P)
     const size_t numVertices = GA.n;
     const uintT maxDegree = getMaxDeg(GA);
     std::vector<uintT> colorData(numVertices, maxDegree);
+    // randomizeColors(GA, colorData);
 
     // Verbose variables
     bool verbose = true;
@@ -76,7 +77,7 @@ void Compute(graph<vertex> &GA, commandLine P)
         activeVertices = currentSchedule.numTasks();
 
         // Parallel loop where each vertex is assigned a color
-        parallel_for(uintT v_i = 0; v_i < numVertices; v_i++)
+        parallel_for (uintT v_i = 0; v_i < numVertices; v_i++)
         {
             if (currentSchedule.isScheduled(v_i))
             {
@@ -94,9 +95,8 @@ void Compute(graph<vertex> &GA, commandLine P)
                 for(uintT n_i = 0; n_i < vDegree; n_i++)
                 {
                     uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                    uintT neighVal = colorData[neigh]; // Probably race condition here without locks   
-                    if (possibleColors[neighVal]) // Add check to avoid false sharing
-                        possibleColors[neighVal] = false;      
+                    uintT neighVal = colorData[neigh];  
+                    possibleColors[neighVal] = false;      
                 }
 
                 // Find minimum color by iterating through color array in increasing order
@@ -124,7 +124,8 @@ void Compute(graph<vertex> &GA, commandLine P)
                     for (uintT n_i = 0; n_i < vDegree; n_i++)
                     {
                         uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                        currentSchedule.schedule(neigh, false);
+                        if (currentColor < colorData[neigh] || colorData[v_i] == colorData[neigh])
+                            currentSchedule.schedule(neigh, false);
                     }
                 }
             }
