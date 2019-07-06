@@ -34,4 +34,4 @@
 # Directory
 /datasets
 /.vscode
-/bin
+/bin/*
