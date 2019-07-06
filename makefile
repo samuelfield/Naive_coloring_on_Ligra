@@ -33,7 +33,7 @@ CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -O3 -DCILK -lpthread $(INTT) $
 
 .PHONY: all clean
 
-ALL: asynch_locks asynch_lockfree asynch_naive asynch_push_passive asynch_push_active serial_naive
+ALL: asynch_locks asynch_lockfree asynch_naive asynch_push_passive asynch_push_active serial_naive asynch_verification
 
 all: $(ALL)
 
@@ -51,6 +51,9 @@ asynch_push_passive: $(SRC_DIR)/asynch_push_passive.cc
 
 asynch_push_active: $(SRC_DIR)/asynch_push_active.cc
 	$(CXX) -o $(BIN_DIR)/asynch_push_active $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/asynch_push_active.cc
+
+asynch_verification: $(SRC_DIR)/asynch_verification.cc
+	$(CXX) -o $(BIN_DIR)/asynch_verification $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/asynch_verification.cc
 
 serial_naive: $(SRC_DIR)/serial_naive.cc
 	$(CXX) -o $(BIN_DIR)/serial_naive $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/serial_naive.cc

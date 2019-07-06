@@ -37,59 +37,6 @@
 
 uintT vertexPriority;
 
-// struct ReadersWriterLock
-// {
-//     std::mutex shared;
-//     std::mutex exclusive;
-//     uintT blockers;
-
-//     ReadersWriterLock() : shared(), exclusive(), blockers(0) {}
-
-//     bool BeginRead ()
-//     {
-//         shared.lock();
-//         if (blockers == 0)
-//         {
-//             if(exclusive.try_lock())
-//             {
-//                 blockers++;
-//                 shared.unlock();
-//                 return true;
-//             }   
-//             else 
-//             {
-//                 shared.unlock();
-//                 return false;
-//             }
-//         }
-//         else
-//         {
-//             blockers++;
-//             shared.unlock();
-//             return true;
-//         }
-//     }
-
-//     void EndRead ()
-//     {
-//         shared.lock();
-//         blockers--;
-//         if (blockers == 0)
-//             exclusive.unlock();
-//         shared.unlock();
-//     }
-
-//     void BeginWrite()
-//     {
-//         exclusive.lock();
-//     }
-
-//     void EndWrite()
-//     {
-//         exclusive.unlock();
-//     }      
-// };
-
 struct Color
 {
     uintT color;

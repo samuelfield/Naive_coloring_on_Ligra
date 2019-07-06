@@ -1,3 +1,27 @@
+// This code is part of the project "Ligra: A Lightweight Graph Processing
+// Framework for Shared Memory", presented at Principles and Practice of
+// Parallel Programming, 2013.
+// Copyright (c) 2013 Julian Shun and Guy Blelloch
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights (to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 #include "coloring_base.h"
 
 // Naive coloring implementation
@@ -13,7 +37,7 @@ void Compute(graph<vertex> &GA, commandLine P)
     const size_t numVertices = GA.n;
     const uintT maxDegree = getMaxDeg(GA);
     std::vector<uintT> colorData(numVertices, maxDegree); 
-    randomizeColors(GA, colorData);
+    // randomizeColors(GA, colorData);
 
     // Verbose variables
     bool verbose = true;
@@ -30,17 +54,12 @@ void Compute(graph<vertex> &GA, commandLine P)
     
     // Loop over vertices until nothing is scheduled
     uint64_t iter = 0;
-    while (true)
+    while (currentSchedule.anyScheduledTasks())
     {
-        iter++;
-        // Check if schedule is empty and break out of loop if it is
-        if (currentSchedule.anyScheduledTasks() == false)
-        {
-            break;
-        }
 
         if (verbose)
         {
+            iter++;
             std::cout << std::endl;
             std::cout << "Iteration: " << iter << std::endl;
         }
@@ -87,7 +106,6 @@ void Compute(graph<vertex> &GA, commandLine P)
                             scheduleNeighbors = true;
                             changedVertices++;
                         }
-
                         break;
                     }
                     newColor++;
