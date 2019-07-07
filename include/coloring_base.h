@@ -26,6 +26,7 @@
 #include <thread>
 #include <mutex>
 #include <vector>
+#include <unordered_map>
 #include <random>
 #include <ctime>
 
@@ -35,6 +36,12 @@
 
 #define TIME_PRECISION 3
 
+struct listNode
+{
+    uintT vertexID;
+    listNode* nextNode;
+    listNode* prevNode;
+};
 
 // Go through every vertex and check that it's color does not conflict with neighbours
 // while also checking that each vertex is minimally colored

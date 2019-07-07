@@ -30,15 +30,73 @@ void Compute(graph<vertex> &GA, commandLine P)
 {
     timer fullTimer, iterTimer;
     fullTimer.start();
-    
+
     // Check that graph is undirected (out degree == in degree for all vertices)
     ensureUndirected(GA);
     
     const size_t numVertices = GA.n;
     const uintT maxDegree = getMaxDeg(GA);
-    std::vector<uintT> colorData(numVertices, maxDegree);
     // randomizeColors(GA, colorData);
-    // std::vector<uintT> minimalColor(numVertices, 0);
+    std::vector<uintT> minimalColor(numVertices, 0);
+    std::vector<uintT> colorData(numVertices); 
+    for (uintT v_i = 0; v_i < numVertices; v_i++)
+    {
+        colorData[v_i] = GA.V[v_i].getOutDegree();
+    }
+
+    // Make neighbour lists
+    std::vector<std::vector<listNode>> neighbours(numVertices);
+    for (uintT v_i = 0; v_i < numVertices; v_i++)
+    {
+        uintT vDegree = GA.V[v_i].getOutDegree();
+
+        neighbours[v_i].resize(vDegree + 2);
+
+        // Set head and tail node
+        neighbours[v_i][0].vertexID = -1;
+        neighbours[v_i][0].nextNode = &neighbours[v_i][1];
+        neighbours[v_i][0].prevNode = nullptr;
+
+        neighbours[v_i][vDegree + 1].vertexID = -1;
+        neighbours[v_i][vDegree + 1].nextNode = nullptr;
+        neighbours[v_i][vDegree + 1].prevNode = &neighbours[v_i][vDegree];;
+
+
+        for (uintT n_i = 0; n_i < vDegree; n_i++)
+        {
+            neighbours[v_i][n_i+1].vertexID = GA.V[v_i].getOutNeighbor(n_i);
+            neighbours[v_i][n_i+1].nextNode = &neighbours[v_i][n_i+2];
+            neighbours[v_i][n_i+1].prevNode = &neighbours[v_i][n_i];
+        }
+    }
+
+    // Make map vertexID -> neighbours index for removing neighbours
+    std::vector<std::unordered_map<uintT,uintT>> reverseNeighbours(numVertices);
+    for (uintT v_i = 0; v_i < numVertices; v_i++)
+    {
+        uintT vDegree = GA.V[v_i].getOutDegree();
+        for (uintT n_i = 0; n_i < vDegree; n_i++)
+        {
+            reverseNeighbours[v_i][GA.V[v_i].getOutNeighbor(n_i)] = n_i + 1;
+        }
+    }
+
+    // Make bool array for possible color values and then set any color
+    // already taken by neighbours to false
+    std::vector<std::vector<uintT>> possibleColors(numVertices);
+    for (uintT v_i = 0; v_i < numVertices; v_i++)
+    {
+        uintT vDegree = GA.V[v_i].getOutDegree();
+        possibleColors[v_i].resize(vDegree + 1, 0);
+
+        for (uintT n_i = 0; n_i < vDegree; n_i++)
+        {
+            uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
+            uintT neighDegree = GA.V[neigh].getOutDegree();
+            if (vDegree >= neighDegree)
+                possibleColors[v_i][neighDegree]++;
+        }
+    }
 
     // Verbose variables
     bool verbose = true;
@@ -52,7 +110,7 @@ void Compute(graph<vertex> &GA, commandLine P)
     currentSchedule.scheduleAll(false);
 
     double lastStopTime = iterTimer.getTime();
-
+    
     // Loop over vertices until nothing is scheduled
     uint64_t iter = 0;
     while (currentSchedule.anyScheduledTasks())
@@ -65,50 +123,40 @@ void Compute(graph<vertex> &GA, commandLine P)
         }
         activeVertices = 0;
         activeEdges = 0;
-        changedVertices = 0;
+        changedVertices= 0;
 
         currentSchedule.newIteration();
         activeVertices = currentSchedule.numTasks();
 
-        // Parallel loop where each vertex is assigned a color
-        parallel_for (uintT v_i = 0; v_i < numVertices; v_i++)
+        // Loop where each vertex is assigned a color
+        for (uintT v_i = 0; v_i < numVertices; v_i++)
         {
             if (currentSchedule.isScheduled(v_i))
             {
                 // Get current vertex's neighbours
                 const uintT vDegree = GA.V[v_i].getOutDegree();
                 bool scheduleNeighbors = false;
-                // bool removeFromNeigh = false;
+                bool removeFromNeigh = false;
+
+                listNode* head = &neighbours[v_i][0];
+                listNode* tail = &neighbours[v_i][vDegree+1];
                 
                 activeEdges += vDegree;
 
-                // Make bool array for possible color values and then set any color
-                // already taken by neighbours to false
-                std::vector<bool> possibleColors(maxDegree + 1, true);
-                
-                for(uintT n_i = 0; n_i < vDegree; n_i++)
-                {
-                    uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                    uintT neighVal = colorData[neigh];  
-                    possibleColors[neighVal] = false;      
-                }
-
                 // Find minimum color by iterating through color array in increasing order
-                uintT newColor = 0;
+                uintT newColor = minimalColor[v_i];
                 uintT oldColor = colorData[v_i]; 
-                while (newColor <= vDegree)
+                while (newColor < oldColor)
                 {                    
                     // If color is available and it is not the vertex's current value then try to assign
-                    if (possibleColors[newColor])
+                    if (possibleColors[v_i][newColor] == 0)
                     {
-                        if (oldColor != newColor)
-                        {
-                            colorData[v_i] = newColor;
-                            // if (newColor == minimalColor[v_i])
-                            //     removeFromNeigh = true;
-                            scheduleNeighbors = true;
-                            changedVertices++;
-                        }
+                        colorData[v_i] = newColor;
+                        if (newColor == minimalColor[v_i])
+                            removeFromNeigh = true;
+                        scheduleNeighbors = true;
+                        changedVertices++;
+
                         break;
                     }
                     newColor++;
@@ -117,11 +165,29 @@ void Compute(graph<vertex> &GA, commandLine P)
                 // Schedule all neighbours if required
                 if (scheduleNeighbors)
                 {
-                    for (uintT n_i = 0; n_i < vDegree; n_i++)
+                    listNode* neighNode = head->nextNode;
+                    while( neighNode != tail)
                     {
-                        uintT neigh = GA.V[v_i].getOutNeighbor(n_i);
-                        if (oldColor < colorData[neigh] || colorData[v_i] == colorData[neigh])
+                        uintT neigh = neighNode->vertexID;
+                        if (oldColor < colorData[neigh])
                             currentSchedule.schedule(neigh, false);
+
+                        if (removeFromNeigh)
+                        {
+                            uintT indexToRemove = reverseNeighbours[neigh][v_i];
+                            neighbours[neigh][indexToRemove].prevNode->nextNode = neighbours[neigh][indexToRemove].nextNode;
+                            neighbours[neigh][indexToRemove].nextNode->prevNode = neighbours[neigh][indexToRemove].prevNode;
+
+                            if (minimalColor[neigh] == newColor) 
+                                minimalColor[neigh] = newColor + 1;
+                        }
+
+                        uintT neighDeg = GA.V[neigh].getOutDegree();
+                        if (neighDeg >= newColor)
+                            possibleColors[neigh][newColor]++;
+                        if (neighDeg >= oldColor)
+                            possibleColors[neigh][oldColor]--;
+                        neighNode = neighNode->nextNode;
                     }
                 }
             }

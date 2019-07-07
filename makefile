@@ -28,14 +28,17 @@ BIN_DIR = bin
 
 LDLIBS += -lcilkrts -fcilkplus
 CPPFLAGS += -Iinclude -isystem ligra
-CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -O3 -DCILK -lpthread $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
-# CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -g -DCILK -lpthread $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
+# CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -O3 -DCILK -lpthread $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
+CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -g -DCILK -lpthread $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
 
 .PHONY: all clean
 
-ALL: asynch_locks asynch_lockfree asynch_naive asynch_push_passive asynch_push_active serial_naive asynch_verification
+ALL: $(BIN_DIR) asynch_locks asynch_lockfree asynch_naive asynch_push_passive asynch_push_active serial asynch_verification serial_prune
 
 all: $(ALL)
+
+$(BIN_DIR):
+	mkdir $(BIN_DIR)
 
 asynch_locks: $(SRC_DIR)/asynch_locks.cc
 	$(CXX) -o $(BIN_DIR)/asynch_locks $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/asynch_locks.cc
@@ -55,8 +58,11 @@ asynch_push_active: $(SRC_DIR)/asynch_push_active.cc
 asynch_verification: $(SRC_DIR)/asynch_verification.cc
 	$(CXX) -o $(BIN_DIR)/asynch_verification $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/asynch_verification.cc
 
-serial_naive: $(SRC_DIR)/serial_naive.cc
-	$(CXX) -o $(BIN_DIR)/serial_naive $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/serial_naive.cc
+serial: $(SRC_DIR)/serial.cc
+	$(CXX) -o $(BIN_DIR)/serial $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/serial.cc
+
+serial_prune: $(SRC_DIR)/serial_prune.cc
+	$(CXX) -o $(BIN_DIR)/serial_prune $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/serial_prune.cc
 
 # color_cm.app: $(SRC_DIR)/coloring_asynch_locksCM.cc
 # 	$(CXX) -o color_cm.app $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/coloring_asynch_locksCM.cc
