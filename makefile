@@ -28,8 +28,8 @@ BIN_DIR = bin
 
 LDLIBS += -lcilkrts -fcilkplus
 CPPFLAGS += -Iinclude -isystem ligra
-# CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -O3 -DCILK -lpthread $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
-CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -g -DCILK -lpthread $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
+CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -O3 -DCILK -lpthread $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
+# CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -g -DCILK -lpthread $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
 
 .PHONY: all clean
 
