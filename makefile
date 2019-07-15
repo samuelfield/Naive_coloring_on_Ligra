@@ -33,7 +33,7 @@ CXXFLAGS += -Wall -std=c++14 -fcilkplus -lcilkrts -O3 -DCILK -lpthread $(INTT) $
 
 .PHONY: all clean
 
-ALL: $(BIN_DIR) asynch_locks asynch_lockfree asynch_naive asynch_push_passive asynch_push_active serial asynch_verification serial_prune
+ALL: $(BIN_DIR) asynch_locks asynch_lockfree asynch_naive asynch_push_passive asynch_push_active serial asynch_occ serial_prune asynch_multiset
 
 all: $(ALL)
 
@@ -55,8 +55,11 @@ asynch_push_passive: $(SRC_DIR)/asynch_push_passive.cc
 asynch_push_active: $(SRC_DIR)/asynch_push_active.cc
 	$(CXX) -o $(BIN_DIR)/asynch_push_active $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/asynch_push_active.cc
 
-asynch_verification: $(SRC_DIR)/asynch_verification.cc
-	$(CXX) -o $(BIN_DIR)/asynch_verification $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/asynch_verification.cc
+asynch_occ: $(SRC_DIR)/asynch_occ.cc
+	$(CXX) -o $(BIN_DIR)/asynch_occ $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/asynch_occ.cc
+
+asynch_multiset: $(SRC_DIR)/asynch_multiset.cc
+	$(CXX) -o $(BIN_DIR)/asynch_multiset $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/asynch_multiset.cc
 
 serial: $(SRC_DIR)/serial.cc
 	$(CXX) -o $(BIN_DIR)/serial $(CPPFLAGS) $(CXXFLAGS) $(SRC_DIR)/serial.cc
